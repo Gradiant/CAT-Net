@@ -38,6 +38,7 @@ from pathlib import Path
 from project_config import dataset_paths
 import seaborn as sns; sns.set_theme()
 import matplotlib.pyplot as plt
+import os
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -62,7 +63,7 @@ def main():
     # Instead of using argparse, force these args:
 
     ## CHOOSE ##
-    args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v1.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
@@ -83,6 +84,10 @@ def main():
         shuffle=False,  # must be False to get accurate filename
         num_workers=1,
         pin_memory=False)
+    
+    gpus = list(config.GPUS)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpus[0])
+    gpus[0] = 0
 
     # criterion
     if config.LOSS.USE_OHEM:
@@ -90,24 +95,25 @@ def main():
                                      thres=config.LOSS.OHEMTHRES,
                                      min_kept=config.LOSS.OHEMKEEP,
                                      weight=test_dataset.class_weights).cuda()
+
     else:
         criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
-                                 weight=test_dataset.class_weights).cuda()
+                                 weight=test_dataset.class_weights).cuda(device=gpus[0])
 
     model = eval('models.' + config.MODEL.NAME +
                  '.get_seg_model')(config)
+
     if config.TEST.MODEL_FILE:
         model_state_file = config.TEST.MODEL_FILE
     else:
         raise ValueError("Model file is not specified.")
     print('=> loading model from {}'.format(model_state_file))
-    model = FullModel(model, criterion)
-    checkpoint = torch.load(model_state_file)
-    model.model.load_state_dict(checkpoint['state_dict'])
-    print("Epoch: {}".format(checkpoint['epoch']))
-    gpus = list(config.GPUS)
-    model = nn.DataParallel(model, device_ids=gpus).cuda()
 
+    model = FullModel(model, criterion)
+    checkpoint = torch.load(model_state_file, map_location='cuda:0')
+
+    model.model.load_state_dict(checkpoint['state_dict'])
+    model = nn.DataParallel(model, device_ids=gpus).cuda()
     dataset_paths['SAVE_PRED'].mkdir(parents=True, exist_ok=True)
 
 
