@@ -63,7 +63,13 @@ def main():
     # Instead of using argparse, force these args:
 
     ## CHOOSE ##
-    args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    FULL_OPT = True
+    ##working option
+    if FULL_OPT:
+        args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    else:    
+        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+
     # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
@@ -73,8 +79,10 @@ def main():
     cudnn.enabled = config.CUDNN.ENABLED
 
     ## CHOOSE ##
-    test_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), DCT_channels=1, mode='arbitrary', read_from_jpeg=True)  # full model
-    # test_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), DCT_channels=1, mode='arbitrary', read_from_jpeg=True)  # DCT stream
+    if FULL_OPT:
+        test_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), DCT_channels=1, mode='arbitrary', read_from_jpeg=True)  # full model
+    else:
+        test_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), DCT_channels=1, mode='arbitrary', read_from_jpeg=True)  # DCT stream
 
     print(test_dataset.get_info())
 
@@ -129,8 +137,22 @@ def main():
             name = os.path.split(name)[-1]
             return name
 
+    outputfile = open("catnetresultscopymove.csv","w")
+    outputfile.write("filename,sum,max\n")
+
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
+            print("load file : {}".format(get_next_filename(index)))
+            if 'mask' in get_next_filename(index):
+                print("skip mask")
+                continue
+            print("Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
+            
+            mb_size = label.size()[1]*label.size()[2]/1000000
+            if mb_size > 8.3:
+                print("Skip image, too big image!")
+                continue
+            
             size = label.size()
             image = image.cuda()
             label = label.long().cuda()
@@ -140,9 +162,34 @@ def main():
             pred = F.softmax(pred, dim=0)[1]
             pred = pred.cpu().numpy()
 
+            width_im, heigh_im = np.shape(pred)
+            print("% mod {:.2f}% and max value {}".format(100*pred.sum()/(width_im*heigh_im), pred.max()))
+
+            outputfile.write("{},{},{}\n".format(get_next_filename(index), pred.sum()/(width_im*heigh_im), pred.max()))
+
             # filename
             filename = os.path.splitext(get_next_filename(index))[0] + ".png"
             filepath = dataset_paths['SAVE_PRED'] / filename
+
+            #plot2
+            # try:
+            #     import cv2
+            #     print(get_next_filename(index))
+            #     img = cv2.imread('/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION/'+get_next_filename(index), 1)
+            #     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            #     h, w = np.shape(pred)
+
+            #     heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
+            #     img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
+
+            #     fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
+            #     cv2.imwrite(str(filepath), fin)
+            # except:
+            #     print(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
+
+            del image
+            del label
+            torch.cuda.empty_cache()
 
             # plot
             try:
@@ -156,6 +203,8 @@ def main():
                 plt.close(fig)
             except:
                 print(f"Error occurred while saving output. ({get_next_filename(index)})")
+
+    outputfile.close()
 
 if __name__ == '__main__':
     main()
