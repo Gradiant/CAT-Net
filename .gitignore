@@ -4,4 +4,6 @@ log/
 *.pth
 *.tar
 *.log
+*.csv
+*.csv*
 output_pred/
