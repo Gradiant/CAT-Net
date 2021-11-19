@@ -95,7 +95,7 @@ dvc import "git@github.com:Gradiant/ai-dataset-EXAMPLE_DATASET.git" \
     'COCOannot_images_val': path_to_val_images",
     'COCOannot_masks_val': path_to_val_mask, if you create the mask with coco_to_mmseg (in stages/data/transform) script then they shoud be in results folder",
     'COCOannot_list': path to files list generate with coco_to_mmseg scritp (in stages/data/transform),
-    ```
+```
   
 4- Open Spilcing/data/data_core.py and add the COCOannot class and add the filename of the files list  generate with coco_to_mmseg scritp (in stages/data/transform)
 
