@@ -31,7 +31,7 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim
 from torch.utils.data.distributed import DistributedSampler
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 from lib import models
 from lib.config import config
@@ -83,17 +83,21 @@ def main():
     cudnn.deterministic = config.CUDNN.DETERMINISTIC
     cudnn.enabled = config.CUDNN.ENABLED
 
+    gpus = list(config.GPUS)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpus[0])
+    gpus[0] = 0
+
     # build model
     model = eval('models.' + config.MODEL.NAME +
                  '.get_seg_model')(config)
 
     writer_dict = {
-        'writer': SummaryWriter(tb_log_dir),
+        # 'writer': SummaryWriter(tb_log_dir),
         'train_global_steps': 0,
         'valid_global_steps': 0,
     }
 
-    gpus = list(config.GPUS)
+    # gpus = list(config.GPUS)
     model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
 
     # prepare data
@@ -106,9 +110,10 @@ def main():
     else:
         raise ValueError("Not supported dataset type.")
 
+    print(" ***=> DATALOADER train")
     trainloader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*len(gpus),
+        batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*1,#1 instead of len(gpus)
         shuffle=config.TRAIN.SHUFFLE,
         num_workers=config.WORKERS,
         pin_memory=False, )
@@ -117,6 +122,8 @@ def main():
     ## CHOOSE ##
     valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # full model
     # valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # only DCT stream
+
+    print(" ***=> DATALOADER val")
 
     validloader = torch.utils.data.DataLoader(
         valid_dataset,
@@ -130,10 +137,10 @@ def main():
         criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
                                      thres=config.LOSS.OHEMTHRES,
                                      min_kept=config.LOSS.OHEMKEEP,
-                                     weight=train_dataset.class_weights).cuda()
+                                     weight=train_dataset.class_weights).cuda(device=gpus[0])
     else:
         criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
-                                 weight=train_dataset.class_weights).cuda()
+                                 weight=train_dataset.class_weights).cuda(device=gpus[0])
 
     model = FullModel(model, criterion)
 
@@ -180,9 +187,12 @@ def main():
     for epoch in range(last_epoch, end_epoch):
         # train
         train_dataset.shuffle()  # for class-balanced sampling
+        print(" ====> TRAIN")
         train(config, epoch, config.TRAIN.END_EPOCH,
               epoch_iters, config.TRAIN.LR, num_iters,
               trainloader, optimizer, model, writer_dict, final_output_dir)
+
+        print(" ====> empty cache")
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -191,7 +201,9 @@ def main():
         # Valid
         if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
             print("Start Validating..")
-            writer_dict['valid_global_steps'] = epoch
+            # writer_dict['valid_global_steps'] = epoch
+            print(" ====> VALIDATE")
+
             valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix = \
                 validate(config, validloader, model, writer_dict, "valid")
 
