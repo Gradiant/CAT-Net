@@ -188,9 +188,9 @@ def main():
         # train
         train_dataset.shuffle()  # for class-balanced sampling
         print(" ====> TRAIN")
-        train(config, epoch, config.TRAIN.END_EPOCH,
-              epoch_iters, config.TRAIN.LR, num_iters,
-              trainloader, optimizer, model, writer_dict, final_output_dir)
+        # train(config, epoch, config.TRAIN.END_EPOCH,
+        #       epoch_iters, config.TRAIN.LR, num_iters,
+        #       trainloader, optimizer, model, writer_dict, final_output_dir)
 
         print(" ====> empty cache")
 
@@ -199,12 +199,13 @@ def main():
         time.sleep(3.0)
 
         # Valid
-        if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
+        #if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
+        if epoch % 10 == 0:
             print("Start Validating..")
             # writer_dict['valid_global_steps'] = epoch
             print(" ====> VALIDATE")
 
-            valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix = \
+            valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_avg, prec_avg, recall_avg = \
                 validate(config, validloader, model, writer_dict, "valid")
 
             torch.cuda.empty_cache()
@@ -223,10 +224,16 @@ def main():
 
             msg = '(Valid) Loss: {:.3f}, MeanIU: {: 4.4f}, Best_p_mIoU: {: 4.4f}, avg_mIoU: {: 4.4f}, avg_p_mIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, Mean_Acc: {: 4.4f}'.format(
                 valid_loss, mean_IoU, best_p_mIoU, avg_mIoU, avg_p_mIoU, pixel_acc, mean_acc)
+
             logging.info(msg)
-            logging.info(IoU_array)
+            logging.info("IOU class : {}".format(IoU_array))
             logging.info("confusion_matrix:")
             logging.info(confusion_matrix)
+            logging.info("-------------------")
+            logging.info("F1 total avg = {:.3f}".format(f1_avg))
+            logging.info("Prec total avg = {:.3f}".format(prec_avg))
+            logging.info("Recall total avg = {:.3f}".format(recall_avg))
+
 
         else:
             logging.info("Skip validation.")

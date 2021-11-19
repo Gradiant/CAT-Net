@@ -126,14 +126,14 @@ def get_confusion_matrix(label, pred, size, num_class, ignore=-1):
     """
     output = pred.cpu().numpy().transpose(0, 2, 3, 1)
     seg_pred = np.asarray(np.argmax(output, axis=3), dtype=np.uint8)
-    seg_gt = np.asarray(
+    seg_label = np.asarray(
     label.cpu().numpy()[:, :size[-2], :size[-1]], dtype=np.int)
 
-    ignore_index = seg_gt != ignore
-    seg_gt = seg_gt[ignore_index]
+    ignore_index = seg_label != ignore
+    seg_label = seg_label[ignore_index]
     seg_pred = seg_pred[ignore_index]
 
-    index = (seg_gt * num_class + seg_pred).astype('int32')
+    index = (seg_label * num_class + seg_pred).astype('int32')
     label_count = np.bincount(index)
     confusion_matrix = np.zeros((num_class, num_class))
 
@@ -150,3 +150,43 @@ def adjust_learning_rate(optimizer, base_lr, max_iters,
     lr = base_lr*((1-float(cur_iters)/max_iters)**(power))
     optimizer.param_groups[0]['lr'] = lr
     return lr
+
+def is_class_0(label, size):
+    #get data from tensors
+    seg_label = np.asarray(
+    label.cpu().numpy()[:, :size[-2], :size[-1]], dtype=np.int)
+    result = True if np.max(seg_label) == 0 else False
+    return result    
+
+
+def get_f1_pixel_level(label, pred, size, num_class, ignore=-1):
+    #get data from tensors
+    output = pred.cpu().numpy().transpose(0, 2, 3, 1)
+    seg_pred = np.asarray(np.argmax(output, axis=3), dtype=np.uint8)
+    seg_label = np.asarray(
+    label.cpu().numpy()[:, :size[-2], :size[-1]], dtype=np.int)
+    label = np.reshape(seg_label, (np.shape(seg_label)[1], np.shape(seg_label)[2]))
+    pred_prob = np.reshape(seg_pred, (np.shape(seg_pred)[1], np.shape(seg_pred)[2]))
+    pred = (pred_prob > 0,5) *1 #binary threhold
+    # import cv2
+    # print(np.max(pred))
+    # cv2.imwrite("label.png",label*255)
+    # cv2.imwrite("pred.png",pred*255)
+
+
+    if np.max(pred) == np.max(label) and np.max(pred) == 0:
+        f1, iou = 1.0, 1.0
+        return f1, 0.0, 0.0
+    seg_inv, label_inv = np.logical_not(pred), np.logical_not(label)
+    true_pos = float(np.logical_and(pred, label).sum())
+    false_pos = np.logical_and(pred, label_inv).sum()
+    false_neg = np.logical_and(seg_inv, label).sum()
+    f1 = 2 * true_pos / (2 * true_pos + false_pos + false_neg + 1e-6)
+    precision = true_pos / (true_pos + false_pos + 1e-6)
+    recall = true_pos / (true_pos + false_neg + 1e-6)
+    # print(f1)
+    # print(precision)
+    # print(recall)
+    # exit(-1)
+
+    return f1, precision, recall
