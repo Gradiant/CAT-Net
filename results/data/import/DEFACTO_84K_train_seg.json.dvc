@@ -1,0 +1,12 @@
+md5: 8b6f26fb26e14b173a8526b3882499e9
+frozen: true
+deps:
+- path: annotations/DEFACTO_84K_train_seg.json
+  repo:
+    url: git@github.com:Gradiant/ai-dataset-DEFACTO_84k-segmentacion.git
+    rev: v0.0.1
+    rev_lock: bb126c957b147567c055828cd849f2297b546357
+outs:
+- md5: a9d17cad935c24792922b8aba11bc23c
+  size: 37699474
+  path: DEFACTO_84K_train_seg.json
