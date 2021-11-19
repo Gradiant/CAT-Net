@@ -188,9 +188,9 @@ def main():
         # train
         train_dataset.shuffle()  # for class-balanced sampling
         print(" ====> TRAIN")
-        # train(config, epoch, config.TRAIN.END_EPOCH,
-        #       epoch_iters, config.TRAIN.LR, num_iters,
-        #       trainloader, optimizer, model, writer_dict, final_output_dir)
+        train(config, epoch, config.TRAIN.END_EPOCH,
+              epoch_iters, config.TRAIN.LR, num_iters,
+              trainloader, optimizer, model, writer_dict, final_output_dir)
 
         print(" ====> empty cache")
 
