@@ -18,6 +18,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+TH_BIN = 0.65
+
 class FullModel(nn.Module):
   """
   Distribute the loss on multi-gpu to reduce 
@@ -120,12 +122,29 @@ def create_logger(cfg, cfg_name, phase='train'):
 
     return logger, str(final_output_dir), str(tensorboard_log_dir)
 
+
+def _logit_to_prob(pred):
+    output = pred
+    exp_array = np.exp(output)
+    return exp_array / (1+ exp_array)
+
+def _get_prob_forgery_map(pred):
+    output_logits = pred.cpu().numpy().transpose(0, 2, 3, 1)
+    output = _logit_to_prob(output_logits)
+    _,w, h, _ = np.shape(output)
+    seg_pred = output[:,:,:,1].reshape((1, w,h))
+    return seg_pred
+
+
 def get_confusion_matrix(label, pred, size, num_class, ignore=-1):
     """
     Calcute the confusion matrix by given label and pred
     """
-    output = pred.cpu().numpy().transpose(0, 2, 3, 1)
-    seg_pred = np.asarray(np.argmax(output, axis=3), dtype=np.uint8)
+    seg_pred = _get_prob_forgery_map(pred)
+
+    seg_pred[seg_pred > TH_BIN] = 1
+    seg_pred[seg_pred <= TH_BIN] = 0
+
     seg_label = np.asarray(
     label.cpu().numpy()[:, :size[-2], :size[-1]], dtype=np.int)
 
@@ -161,17 +180,15 @@ def is_class_0(label, size):
 
 def get_f1_pixel_level(label, pred, size, num_class, ignore=-1):
     #get data from tensors
-    output = pred.cpu().numpy().transpose(0, 2, 3, 1)
-    seg_pred = np.asarray(np.argmax(output, axis=3), dtype=np.uint8)
+    
+    seg_pred = _get_prob_forgery_map(pred)
+    seg_pred[seg_pred > TH_BIN] = 1
+    seg_pred[seg_pred <= TH_BIN] = 0
+
     seg_label = np.asarray(
     label.cpu().numpy()[:, :size[-2], :size[-1]], dtype=np.int)
     label = np.reshape(seg_label, (np.shape(seg_label)[1], np.shape(seg_label)[2]))
-    pred_prob = np.reshape(seg_pred, (np.shape(seg_pred)[1], np.shape(seg_pred)[2]))
-    pred = (pred_prob > 0,5) *1 #binary threhold
-    # import cv2
-    # print(np.max(pred))
-    # cv2.imwrite("label.png",label*255)
-    # cv2.imwrite("pred.png",pred*255)
+    pred = np.reshape(seg_pred, (np.shape(seg_pred)[1], np.shape(seg_pred)[2]))
 
 
     if np.max(pred) == np.max(label) and np.max(pred) == 0:
@@ -184,9 +201,6 @@ def get_f1_pixel_level(label, pred, size, num_class, ignore=-1):
     f1 = 2 * true_pos / (2 * true_pos + false_pos + false_neg + 1e-6)
     precision = true_pos / (true_pos + false_pos + 1e-6)
     recall = true_pos / (true_pos + false_neg + 1e-6)
-    # print(f1)
-    # print(precision)
-    # print(recall)
-    # exit(-1)
+
 
     return f1, precision, recall
