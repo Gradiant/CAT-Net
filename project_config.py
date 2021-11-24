@@ -11,16 +11,24 @@ dataset_paths = {
     # Specify where are the roots of the datasets.
     #'FR': dataset_root / "FantasticReality_v1",
     #'IMD': dataset_root / "IMD2020",
-    'CASIA': dataset_root / "CASIA/CASIAv2",
+    # 'CASIA': dataset_root / "CASIA/CASIAv2",
     # 'NC16': dataset_root / "NC2016_Test",
     # 'Columbia': dataset_root / "Columbia Uncompressed Image Splicing Detection",
     # 'Carvalho': dataset_root / "tifs-database",
     # 'tampCOCO': dataset_root / "tampCOCO",
+    'DEFACTO': dataset_root / "DEFACTO-12K",
+    
+    'COCOannot_images_train': dataset_root / "DEFACTO-84K/train_images/",
+    'COCOannot_masks_train':"results/data/transform/coco_to_mmsegmentation-defacto/masks/train/",
+    'COCOannot_images_val': dataset_root / "DEFACTO-12K/images/",
+    'COCOannot_masks_val': "results/data/transform/coco_to_mmsegmentation-defacto/masks/val/",
+    'COCOannot_list': "results/data/transform/coco_to_mmsegmentation-defacto/",
+
     # 'compRAISE': dataset_root / "compRAISE",
     # 'COVERAGE': dataset_root / "COVERAGE",
     # 'CoMoFoD': dataset_root / "CoMoFoD_small_v2",
     # 'GRIP': dataset_root / "CMFDdb_grip",
-    'SAVE_PRED': project_root / "output_ariadnext"
+    'SAVE_PRED': project_root / "output_pred"
 }
 
 

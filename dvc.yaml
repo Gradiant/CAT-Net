@@ -1,0 +1,34 @@
+stages:
+ data-transform-split-CASIA:
+    cmd: python stages/data/transform/split_from_file.py
+      --annotations_train_file results/data/import/DEFACTO_84K_train_seg.json
+      --annotations_test_file results/data/import/DEFACTO_12K_train_seg.json
+      --annotations_val_file results/data/import/DEFACTO_12K_train_seg.json
+      --output_train_file results/data/transform/split/defacto_train.json
+      --output_test_file results/data/transform/split/defacto_test.json
+      --output_val_file results/data/transform/split/defacto_val.json
+    deps:
+      - stages/data/transform/split_from_file.py
+      - results/data/import/DEFACTO_84K_train_seg.json
+      - results/data/import/DEFACTO_12K_train_seg.json
+    outs:
+      - results/data/transform/split/defacto_train.json
+      - results/data/transform/split/defacto_test.json
+      - results/data/transform/split/defacto_val.json
+  
+ coco-to-mmsegmentation:
+    foreach:
+      - train
+      - test
+      - val
+    do:
+      cmd: python stages/data/transform/coco_to_mmsegmentation.py
+        --annotations_file results/data/transform/split/defacto_${item}.json
+        --output_annotations_file results/data/transform/coco_to_mmsegmentation-defacto/defacto_${item}.txt
+        --output_masks_dir results/data/transform/coco_to_mmsegmentation-defacto/masks/${item}
+      deps:
+        - stages/data/transform/coco_to_mmsegmentation.py
+        - results/data/transform/split/defacto_${item}.json
+      outs:
+        - results/data/transform/coco_to_mmsegmentation-defacto/defacto_${item}.txt
+        - results/data/transform/coco_to_mmsegmentation-defacto/masks/${item}
