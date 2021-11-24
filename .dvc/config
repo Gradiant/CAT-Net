@@ -1,0 +1,8 @@
+[cache]
+    type = "reflink,symlink,hardlink,copy"
+    shared = group
+    dir = /media/VA/DVC/ai-projects/original_catnet
+['remote "local-remote"']
+    url = /media/VA/DVC_remote/ai-projects/original_catnet
+[core]
+    remote = local-remote

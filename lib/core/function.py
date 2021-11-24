@@ -12,6 +12,7 @@ July 14, 2020
 import logging
 import os
 import time
+import mlflow
 
 import numpy as np
 from tqdm import tqdm
@@ -24,8 +25,11 @@ from torch.nn import functional as F
 
 from lib.utils.utils import AverageMeter
 from lib.utils.utils import get_confusion_matrix
+from lib.utils.utils import get_f1_pixel_level
+from lib.utils.utils import is_class_0
 from lib.utils.utils import adjust_learning_rate
 from lib.utils.utils import get_world_size, get_rank
+import progressbar
 
 
 
@@ -51,16 +55,17 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
     ave_loss = AverageMeter()
     tic = time.time()
     cur_iters = epoch*epoch_iters
-    writer = writer_dict['writer']
+    # writer = writer_dict['writer']
     global_steps = writer_dict['train_global_steps']
     world_size = get_world_size()
 
     for i_iter, (images, labels, qtable) in enumerate(trainloader):
+
         # images, labels, _, _ = batch
         images = images.cuda()
         labels = labels.long().cuda()
-
         losses, _ = model(images, labels, qtable)  # _ : output of the model (see utils.py)
+
         loss = losses.mean()
 
         reduced_loss = reduce_tensor(loss)
@@ -80,16 +85,20 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
                                   base_lr,
                                   num_iters,
                                   i_iter+cur_iters)
-
+        
         if i_iter % config.PRINT_FREQ == 0:
             print_loss = ave_loss.average() / world_size
             msg = 'Epoch: [{}/{}] Iter:[{}/{}], Time: {:.2f}, ' \
                   'lr: {:.6f}, Loss: {:.6f}' .format(
                       epoch, num_epoch, i_iter, epoch_iters, 
                       batch_time.average(), lr, print_loss)
-            logging.info(msg)
+            # logging.info(msg)
+            import sys
+            sys.stdout.write('\r'+str(msg))
+
+            mlflow.log_metrics({"loss":print_loss, "lr": lr})
             
-            writer.add_scalar('train_loss', print_loss, global_steps)
+            # writer.add_scalar('train_loss', print_loss, global_steps)
             global_steps += 1
             writer_dict['train_global_steps'] = global_steps
 
@@ -104,6 +113,15 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
         (config.DATASET.NUM_CLASSES, config.DATASET.NUM_CLASSES))
     avg_mIoU = AverageMeter()
     avg_p_mIoU = AverageMeter()
+    f1_array = np.array([])
+    precission_array = np.array([])
+    recall_array = np.array([])
+    f1_class_0_array = np.array([])
+    f1_class_1_array = np.array([])
+    prec_class_0_array = np.array([])
+    prec_class_1_array = np.array([])
+    rec_class_0_array = np.array([])
+    rec_class_1_array = np.array([])
 
     with torch.no_grad():
         for _, (image, label, qtable) in enumerate(tqdm(testloader)):
@@ -117,6 +135,19 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
             loss = losses.mean()
             reduced_loss = reduce_tensor(loss)
             ave_loss.update(reduced_loss.item())
+
+            if not(is_class_0(label, size)):
+                f1_image, precission, recall = get_f1_pixel_level(
+                label, 
+                pred, 
+                size,
+                config.DATASET.NUM_CLASSES,
+                config.TRAIN.IGNORE_LABEL)
+                
+                f1_array = np.append(f1_array, f1_image)
+                precission_array = np.append(precission_array, precission)
+                recall_array = np.append(recall_array,recall)
+                #class 0 always returns 0 for all metrics
 
             current_confusion_matrix = get_confusion_matrix(
                 label,
@@ -139,6 +170,10 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
             p_mIoU = 0.5 * (FN / np.maximum(1.0, FN + TP + TN)) + 0.5 * (FP / np.maximum(1.0, FP + TP + TN))
             avg_p_mIoU.update(np.maximum(mean_IoU, p_mIoU))
 
+    f1_result = np.average(f1_array)
+    prec_result = np.average(precission_array)
+    recall_result = np.average(recall_array)
+
     confusion_matrix = torch.from_numpy(confusion_matrix).cuda()
     reduced_confusion_matrix = reduce_tensor(confusion_matrix)
 
@@ -152,14 +187,14 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
     mean_IoU = IoU_array.mean()
     print_loss = ave_loss.average()/world_size
 
-    if rank == 0:
-        writer = writer_dict['writer']
-        global_steps = writer_dict['valid_global_steps']
-        writer.add_scalar(valid_set+'_loss', print_loss, global_steps)
-        writer.add_scalar(valid_set+'_mIoU', mean_IoU, global_steps)
-        writer.add_scalar(valid_set+'_avg_mIoU', avg_mIoU.average(), global_steps)
-        writer.add_scalar(valid_set+'_avg_p-mIoU', avg_p_mIoU.average(), global_steps)
-        writer.add_scalar(valid_set+'_pixel_acc', pixel_acc, global_steps)
-        writer_dict['valid_global_steps'] = global_steps + 1
-    return print_loss, mean_IoU, avg_mIoU.average(), avg_p_mIoU.average(), IoU_array, pixel_acc, mean_acc, confusion_matrix
+    # if rank == 0:
+    #     writer = writer_dict['writer']
+    #     global_steps = writer_dict['valid_global_steps']
+    #     writer.add_scalar(valid_set+'_loss', print_loss, global_steps)
+    #     writer.add_scalar(valid_set+'_mIoU', mean_IoU, global_steps)
+    #     writer.add_scalar(valid_set+'_avg_mIoU', avg_mIoU.average(), global_steps)
+    #     writer.add_scalar(valid_set+'_avg_p-mIoU', avg_p_mIoU.average(), global_steps)
+    #     writer.add_scalar(valid_set+'_pixel_acc', pixel_acc, global_steps)
+    #     writer_dict['valid_global_steps'] = global_steps + 1
+    return print_loss, mean_IoU, avg_mIoU.average(), avg_p_mIoU.average(), IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_result, prec_result, recall_result
 

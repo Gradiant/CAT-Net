@@ -1,0 +1,22 @@
+name: catnet
+
+#conda_env: environment/conda.yaml
+
+entry_points:
+  main:
+    # parameters:
+    #   dataset:
+    #     type: path
+    #   model:
+    #     type: path
+    #   optimizer:
+    #     type: path
+    #   scheduler:
+    #     type: path
+    #   gpus:
+    #     type: int
+    #     default: 1
+    # command: "python stages/experiment/run_experiment_mlflow_detection.py --dataset {dataset} --model {model} --optimizer {optimizer} --scheduler {scheduler} --gpus {gpus}"
+    command: "python stages/experiment/run_experiment_mlflow.py"
+  repro:
+    command: dvc repro

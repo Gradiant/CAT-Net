@@ -1,5 +1,5 @@
 # CAT-Net
-This is the official repository for Compression Artifact Tracing Network (CAT-Net). Given a possibly manipulated image, this network outputs a probability map of each pixel being manipulated.
+This is a fork from the official repository for Compression Artifact Tracing Network (CAT-Net). Given a possibly manipulated image, this network outputs a probability map of each pixel being manipulated.
 
 Keywords: CAT-Net, Image forensics, Multimedia forensics, Image manipulation detection, Image manipulation localization, Image processing
 
@@ -75,6 +75,29 @@ So non-JPEG images in each dataset must be JPEG compressed (with Q100 and no chr
 You may run each dataset file (EX: Splicing/data/dataset_IMD2020.py), for automatic compression.
 
 If you wish to add additional datasets, you should create dataset class files similar to the existing ones.
+
+There is a dataset class for COCO annotation datasets. You have to follow next steps:
+
+1- Import your annotations in results/data/import folder. If you are using ai-dataset project you can use dvc import, for example:
+```
+dvc import "git@github.com:Gradiant/ai-dataset-EXAMPLE_DATASET.git" \
+"annotations/EXAMPLE_DATASET.json" \
+-o "results/data/import/EXAMPLE_DATASET.json"
+--rev v0.1.0
+```
+
+2- Run dvc.yaml (dvc repro) in order to create the data split and generate the tamp_list file and store masks taken from the COCO annots.
+
+3-Open project_config.py and complete next data:
+```
+    'COCOannot_images_train': path_to_train_images",
+    'COCOannot_masks_train': path_to_train_mask, if you create the mask with coco_to_mmseg (in stages/data/transform) script then they shoud be in results folder",
+    'COCOannot_images_val': path_to_val_images",
+    'COCOannot_masks_val': path_to_val_mask, if you create the mask with coco_to_mmseg (in stages/data/transform) script then they shoud be in results folder",
+    'COCOannot_list': path to files list generate with coco_to_mmseg scritp (in stages/data/transform),
+```
+  
+4- Open Spilcing/data/data_core.py and add the COCOannot class and add the filename of the files list  generate with coco_to_mmseg scritp (in stages/data/transform)
 
 ##### 2. Train.
 At the root of this repo, run:

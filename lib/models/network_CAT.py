@@ -559,7 +559,7 @@ class CAT_Net(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
         if os.path.isfile(pretrained_rgb):
-            loaded_dict = torch.load(pretrained_rgb)
+            loaded_dict = torch.load(pretrained_rgb, map_location='cuda:0')
             model_dict = self.state_dict()
             loaded_dict = {k: v for k, v in loaded_dict.items()
                                if k in model_dict.keys() and not k.startswith('lost_layer.')}  # RGB weight
@@ -569,7 +569,8 @@ class CAT_Net(nn.Module):
         else:
             logger.warning('=> Cannot load pretrained RGB')
         if os.path.isfile(pretrained_dct):
-            loaded_dict = torch.load(pretrained_dct)['state_dict']
+            loaded_dict0 = torch.load(pretrained_dct, map_location='cuda:0')
+            loaded_dict = loaded_dict0['state_dict']
             model_dict = self.state_dict()
             loaded_dict = {k: v for k, v in loaded_dict.items()
                                if k in model_dict.keys()}
@@ -585,5 +586,4 @@ class CAT_Net(nn.Module):
 def get_seg_model(cfg, **kwargs):
     model = CAT_Net(cfg, **kwargs)
     model.init_weights(cfg.MODEL.PRETRAINED_RGB, cfg.MODEL.PRETRAINED_DCT)
-
     return model

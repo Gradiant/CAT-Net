@@ -22,7 +22,7 @@ import logging
 import time
 import timeit
 from pathlib import Path
-
+import mlflow
 import gc
 import numpy as np
 
@@ -31,7 +31,7 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim
 from torch.utils.data.distributed import DistributedSampler
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 from lib import models
 from lib.config import config
@@ -63,7 +63,7 @@ def parse_args():
     return args
 
 
-def main():
+def train_model():
     # args = parse_args()
     # Instead of using argparse, force these args:
     ## CHOOSE ##
@@ -83,17 +83,21 @@ def main():
     cudnn.deterministic = config.CUDNN.DETERMINISTIC
     cudnn.enabled = config.CUDNN.ENABLED
 
+    gpus = list(config.GPUS)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpus[0])
+    gpus[0] = 0
+
     # build model
     model = eval('models.' + config.MODEL.NAME +
                  '.get_seg_model')(config)
 
     writer_dict = {
-        'writer': SummaryWriter(tb_log_dir),
+        # 'writer': SummaryWriter(tb_log_dir),
         'train_global_steps': 0,
         'valid_global_steps': 0,
     }
 
-    gpus = list(config.GPUS)
+    # gpus = list(config.GPUS)
     model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
 
     # prepare data
@@ -106,9 +110,10 @@ def main():
     else:
         raise ValueError("Not supported dataset type.")
 
+    print(" ***=> DATALOADER train")
     trainloader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*len(gpus),
+        batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*1,#1 instead of len(gpus)
         shuffle=config.TRAIN.SHUFFLE,
         num_workers=config.WORKERS,
         pin_memory=False, )
@@ -117,6 +122,8 @@ def main():
     ## CHOOSE ##
     valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # full model
     # valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # only DCT stream
+
+    print(" ***=> DATALOADER val")
 
     validloader = torch.utils.data.DataLoader(
         valid_dataset,
@@ -130,10 +137,10 @@ def main():
         criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
                                      thres=config.LOSS.OHEMTHRES,
                                      min_kept=config.LOSS.OHEMKEEP,
-                                     weight=train_dataset.class_weights).cuda()
+                                     weight=train_dataset.class_weights).cuda(device=gpus[0])
     else:
         criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
-                                 weight=train_dataset.class_weights).cuda()
+                                 weight=train_dataset.class_weights).cuda(device=gpus[0])
 
     model = FullModel(model, criterion)
 
@@ -189,10 +196,10 @@ def main():
         time.sleep(3.0)
 
         # Valid
-        if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
-            print("Start Validating..")
-            writer_dict['valid_global_steps'] = epoch
-            valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix = \
+        #if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
+        if epoch % 2 == 0:
+            # writer_dict['valid_global_steps'] = epoch
+            valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_avg, prec_avg, recall_avg = \
                 validate(config, validloader, model, writer_dict, "valid")
 
             torch.cuda.empty_cache()
@@ -211,10 +218,33 @@ def main():
 
             msg = '(Valid) Loss: {:.3f}, MeanIU: {: 4.4f}, Best_p_mIoU: {: 4.4f}, avg_mIoU: {: 4.4f}, avg_p_mIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, Mean_Acc: {: 4.4f}'.format(
                 valid_loss, mean_IoU, best_p_mIoU, avg_mIoU, avg_p_mIoU, pixel_acc, mean_acc)
+
+            metrics={
+                "valid_loss": valid_loss,
+                "meanIou": mean_IoU,
+                "best_p_mIoU": best_p_mIoU,
+                "avg_mIoU": avg_mIoU,
+                "avg_p_mIoU": avg_p_mIoU,
+                "pixel_acc": pixel_acc,
+                "mean_acc": mean_acc,
+                "iou_class0": IoU_array[0],
+                "iou_class1": IoU_array[1],
+                "f1": f1_avg,
+                "precission": prec_avg,
+                "recall": recall_avg
+            }
+
+            mlflow.log_metrics(metrics)
+
             logging.info(msg)
-            logging.info(IoU_array)
+            logging.info("IOU class : {}".format(IoU_array))
             logging.info("confusion_matrix:")
             logging.info(confusion_matrix)
+            logging.info("-------------------")
+            logging.info("F1 total avg = {:.3f}".format(f1_avg))
+            logging.info("Prec total avg = {:.3f}".format(prec_avg))
+            logging.info("Recall total avg = {:.3f}".format(recall_avg))
+
 
         else:
             logging.info("Skip validation.")
@@ -230,4 +260,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    train_model()
