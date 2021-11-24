@@ -12,6 +12,7 @@ July 14, 2020
 import logging
 import os
 import time
+import mlflow
 
 import numpy as np
 from tqdm import tqdm
@@ -94,6 +95,8 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
             # logging.info(msg)
             import sys
             sys.stdout.write('\r'+str(msg))
+
+            mlflow.log_metrics({"loss":print_loss, "lr": lr})
             
             # writer.add_scalar('train_loss', print_loss, global_steps)
             global_steps += 1
