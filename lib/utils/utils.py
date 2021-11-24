@@ -18,7 +18,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-TH_BIN = 0.65
+TH_BIN = 0.35
 
 class FullModel(nn.Module):
   """
