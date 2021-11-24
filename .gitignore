@@ -6,4 +6,6 @@ log/
 *.log
 *.csv
 *.csv*
+*.png
+*.jpg
 output_pred/
