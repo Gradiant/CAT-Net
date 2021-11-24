@@ -22,7 +22,7 @@ import logging
 import time
 import timeit
 from pathlib import Path
-
+import mlflow
 import gc
 import numpy as np
 
@@ -63,7 +63,7 @@ def parse_args():
     return args
 
 
-def main():
+def train_model():
     # args = parse_args()
     # Instead of using argparse, force these args:
     ## CHOOSE ##
@@ -187,12 +187,9 @@ def main():
     for epoch in range(last_epoch, end_epoch):
         # train
         train_dataset.shuffle()  # for class-balanced sampling
-        print(" ====> TRAIN")
         train(config, epoch, config.TRAIN.END_EPOCH,
               epoch_iters, config.TRAIN.LR, num_iters,
               trainloader, optimizer, model, writer_dict, final_output_dir)
-
-        print(" ====> empty cache")
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -200,11 +197,8 @@ def main():
 
         # Valid
         #if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
-        if epoch % 10 == 0:
-            print("Start Validating..")
+        if epoch % 2 == 0:
             # writer_dict['valid_global_steps'] = epoch
-            print(" ====> VALIDATE")
-
             valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_avg, prec_avg, recall_avg = \
                 validate(config, validloader, model, writer_dict, "valid")
 
@@ -224,6 +218,23 @@ def main():
 
             msg = '(Valid) Loss: {:.3f}, MeanIU: {: 4.4f}, Best_p_mIoU: {: 4.4f}, avg_mIoU: {: 4.4f}, avg_p_mIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, Mean_Acc: {: 4.4f}'.format(
                 valid_loss, mean_IoU, best_p_mIoU, avg_mIoU, avg_p_mIoU, pixel_acc, mean_acc)
+
+            metrics={
+                "valid_loss": valid_loss,
+                "meanIou": mean_IoU,
+                "best_p_mIoU": best_p_mIoU,
+                "avg_mIoU": avg_mIoU,
+                "avg_p_mIoU": avg_p_mIoU,
+                "pixel_acc": pixel_acc,
+                "mean_acc": mean_acc,
+                "iou_class0": IoU_array[0],
+                "iou_class1": IoU_array[1],
+                "f1": f1_avg,
+                "precission": prec_avg,
+                "recall": recall_avg
+            }
+
+            mlflow.log_metrics(metrics)
 
             logging.info(msg)
             logging.info("IOU class : {}".format(IoU_array))
@@ -249,4 +260,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    train_model()
