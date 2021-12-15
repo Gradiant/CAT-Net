@@ -1,85 +1,84 @@
 schema: '2.0'
 stages:
-  data-transform-split-CASIA:
-    cmd: python stages/data/transform/split_from_file.py --annotations_train_file
-      results/data/import/DEFACTO_84K_train_seg.json --annotations_test_file results/data/import/DEFACTO_12K_train_seg.json
-      --annotations_val_file results/data/import/DEFACTO_12K_train_seg.json --output_train_file
-      results/data/transform/split/defacto_train.json --output_test_file results/data/transform/split/defacto_test.json
-      --output_val_file results/data/transform/split/defacto_val.json
+  data-transform-split-dociman:
+    cmd: python stages/data/transform/split_from_annots.py --annotations_file results/data/import/DOCIMANv1_segmentation.json
+      --folders_train "["Fileiscorruptedorinvalid", "VeryLow", "WithoutMarks", "High",
+      "Medium"]" --folders_test "["Protected", "High200", "Nohanpodidoniseprocesados",
+      "Errorwhileprocessingthefile", "Low"]" --folders_val "["Protected", "High200",
+      "Nohanpodidoniseprocesados", "Errorwhileprocessingthefile", "Low"]" --output_train_file
+      results/data/transform/split/dociman_train_prueba.json --output_test_file results/data/transform/split/dociman_test_prueba.json
+      --output_val_file results/data/transform/split/dociman_val_prueba.json
     deps:
-    - path: results/data/import/DEFACTO_12K_train_seg.json
-      md5: 4a1ffa65771d201c16a6d50724c7ebbc
-      size: 4773181
-    - path: results/data/import/DEFACTO_84K_train_seg.json
-      md5: a9d17cad935c24792922b8aba11bc23c
-      size: 37699474
+    - path: results/data/import/DOCIMANv1_segmentation.json
+      md5: a8745dcda651e80466bba19c2510d316
+      size: 1173807154
     - path: stages/data/transform/split_from_file.py
       md5: ff7c9f88481b435db2ba56efdf913fb6
       size: 1937
     outs:
-    - path: results/data/transform/split/defacto_test.json
-      md5: 45ef5ffadfb0d0905e61b65b7c19c0bf
-      size: 7077257
-    - path: results/data/transform/split/defacto_train.json
-      md5: 25e20dd42e9774e6640a21ea955d76e4
-      size: 53907614
-    - path: results/data/transform/split/defacto_val.json
-      md5: 45ef5ffadfb0d0905e61b65b7c19c0bf
-      size: 7077257
-  coco-to-mmsegmentation@test:
-    cmd: python stages/data/transform/coco_to_mmsegmentation.py --annotations_file
-      results/data/transform/split/defacto_test.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-defacto/defacto_test.txt
-      --output_masks_dir results/data/transform/coco_to_mmsegmentation-defacto/masks/test
-    deps:
-    - path: results/data/transform/split/defacto_test.json
-      md5: 45ef5ffadfb0d0905e61b65b7c19c0bf
-      size: 7077257
-    - path: stages/data/transform/coco_to_mmsegmentation.py
-      md5: 8d04c9d8d9085d9f83617b4e9dcd8379
-      size: 3512
-    outs:
-    - path: results/data/transform/coco_to_mmsegmentation-defacto/defacto_test.txt
-      md5: de61858ea8f3f744b7fb7e2b09da834b
-      size: 283729
-    - path: results/data/transform/coco_to_mmsegmentation-defacto/masks/test
-      md5: d23d7db98597bfc53978b47705af3411.dir
-      size: 15796991
-      nfiles: 12000
+    - path: results/data/transform/split/dociman_test_prueba.json
+      md5: 99914b932bd37a50b983c5e7c90ae93b
+      size: 2
+    - path: results/data/transform/split/dociman_train_prueba.json
+      md5: 99914b932bd37a50b983c5e7c90ae93b
+      size: 2
+    - path: results/data/transform/split/dociman_val_prueba.json
+      md5: 99914b932bd37a50b983c5e7c90ae93b
+      size: 2
   coco-to-mmsegmentation@val:
     cmd: python stages/data/transform/coco_to_mmsegmentation.py --annotations_file
-      results/data/transform/split/defacto_val.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-defacto/defacto_val.txt
-      --output_masks_dir results/data/transform/coco_to_mmsegmentation-defacto/masks/val
+      results/data/transform/split/dociman_val.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-dociman/dociman_val.txt
+      --output_masks_dir results/data/transform/coco_to_mmsegmentation-dociman/masks/val
     deps:
-    - path: results/data/transform/split/defacto_val.json
-      md5: 45ef5ffadfb0d0905e61b65b7c19c0bf
-      size: 7077257
+    - path: results/data/transform/split/dociman_val.json
+      md5: 6022677e198cbaa1ce4ccf30aec6868f
+      size: 167757955
     - path: stages/data/transform/coco_to_mmsegmentation.py
       md5: 8d04c9d8d9085d9f83617b4e9dcd8379
       size: 3512
     outs:
-    - path: results/data/transform/coco_to_mmsegmentation-defacto/defacto_val.txt
-      md5: de61858ea8f3f744b7fb7e2b09da834b
-      size: 283729
-    - path: results/data/transform/coco_to_mmsegmentation-defacto/masks/val
-      md5: d23d7db98597bfc53978b47705af3411.dir
-      size: 15796991
-      nfiles: 12000
+    - path: results/data/transform/coco_to_mmsegmentation-dociman/dociman_val.txt
+      md5: 641908ad91d3ab6776b09d5db11398fa
+      size: 19788188
+    - path: results/data/transform/coco_to_mmsegmentation-dociman/masks/val
+      md5: 82d562c65c1f203a5ae5d656b32d4a4c.dir
+      size: 155175085
+      nfiles: 324974
+  coco-to-mmsegmentation@test:
+    cmd: python stages/data/transform/coco_to_mmsegmentation.py --annotations_file
+      results/data/transform/split/dociman_test.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-dociman/dociman_test.txt
+      --output_masks_dir results/data/transform/coco_to_mmsegmentation-dociman/masks/test
+    deps:
+    - path: results/data/transform/split/dociman_test.json
+      md5: 6022677e198cbaa1ce4ccf30aec6868f
+      size: 167757955
+    - path: stages/data/transform/coco_to_mmsegmentation.py
+      md5: 8d04c9d8d9085d9f83617b4e9dcd8379
+      size: 3512
+    outs:
+    - path: results/data/transform/coco_to_mmsegmentation-dociman/dociman_test.txt
+      md5: 641908ad91d3ab6776b09d5db11398fa
+      size: 19788188
+    - path: results/data/transform/coco_to_mmsegmentation-dociman/masks/test
+      md5: 82d562c65c1f203a5ae5d656b32d4a4c.dir
+      size: 155175085
+      nfiles: 324974
   coco-to-mmsegmentation@train:
     cmd: python stages/data/transform/coco_to_mmsegmentation.py --annotations_file
-      results/data/transform/split/defacto_train.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-defacto/defacto_train.txt
-      --output_masks_dir results/data/transform/coco_to_mmsegmentation-defacto/masks/train
+      results/data/transform/split/dociman_train.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-dociman/dociman_train.txt
+      --output_masks_dir results/data/transform/coco_to_mmsegmentation-dociman/masks/train
     deps:
-    - path: results/data/transform/split/defacto_train.json
-      md5: 25e20dd42e9774e6640a21ea955d76e4
-      size: 53907614
+    - path: results/data/transform/split/dociman_train.json
+      md5: 000aee390a3b7031a18ff422c2a5d402
+      size: 697270716
     - path: stages/data/transform/coco_to_mmsegmentation.py
       md5: 8d04c9d8d9085d9f83617b4e9dcd8379
       size: 3512
     outs:
-    - path: results/data/transform/coco_to_mmsegmentation-defacto/defacto_train.txt
-      md5: f641716e5153f347b271023cc7fb0db7
-      size: 1823358
-    - path: results/data/transform/coco_to_mmsegmentation-defacto/masks/train
-      md5: 16cd7552a1b397f0f22c8369c4a5ca80.dir
-      size: 115969947
-      nfiles: 84417
+    - path: results/data/transform/coco_to_mmsegmentation-dociman/dociman_train.txt
+      md5: 5b502a73c2c3a64f4387bc5b74c66e41
+      size: 72385252
+    - path: results/data/transform/coco_to_mmsegmentation-dociman/masks/train
+      md5: 3e152db6011cc681d3a4b5edfddcc7e9.dir
+      size: 654944730
+      nfiles: 1371612

@@ -16,13 +16,19 @@ dataset_paths = {
     # 'Columbia': dataset_root / "Columbia Uncompressed Image Splicing Detection",
     # 'Carvalho': dataset_root / "tifs-database",
     # 'tampCOCO': dataset_root / "tampCOCO",
-    'DEFACTO': dataset_root / "DEFACTO-12K",
+    # 'DEFACTO': dataset_root / "DEFACTO-12K",
+
+        
+    'DOCIMANv1_images': dataset_root / "dociman/DOCIMANv1/",#split between train and val is made inside dataset_DOCIMANv1.py
+    'DOCIMANv1_masks_train':"results/data/transform/coco_to_mmsegmentation-dociman/masks/train/",
+    'DOCIMANv1_masks_val': "results/data/transform/coco_to_mmsegmentation-dociman/masks/val/",
+    'DOCIMANv1_list': "results/data/transform/coco_to_mmsegmentation-dociman/",
     
-    'COCOannot_images_train': dataset_root / "DEFACTO-84K/train_images/",
-    'COCOannot_masks_train':"results/data/transform/coco_to_mmsegmentation-defacto/masks/train/",
-    'COCOannot_images_val': dataset_root / "DEFACTO-12K/images/",
-    'COCOannot_masks_val': "results/data/transform/coco_to_mmsegmentation-defacto/masks/val/",
-    'COCOannot_list': "results/data/transform/coco_to_mmsegmentation-defacto/",
+    # 'COCOannot_images_train': dataset_root / "DEFACTO-84K/train_images/",
+    # 'COCOannot_masks_train':"results/data/transform/coco_to_mmsegmentation-defacto/masks/train/",
+    # 'COCOannot_images_val': dataset_root / "DEFACTO-12K/images/",
+    # 'COCOannot_masks_val': "results/data/transform/coco_to_mmsegmentation-defacto/masks/val/",
+    # 'COCOannot_list': "results/data/transform/coco_to_mmsegmentation-defacto/",
 
     # 'compRAISE': dataset_root / "compRAISE",
     # 'COVERAGE': dataset_root / "COVERAGE",

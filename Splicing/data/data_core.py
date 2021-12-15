@@ -13,6 +13,8 @@ from Splicing.data.dataset_FantasticReality import FantasticReality
 from Splicing.data.dataset_IMD2020 import IMD2020
 from Splicing.data.dataset_CASIA import CASIA
 from Splicing.data.dataset_COCOannot import COCOannot
+from Splicing.data.dataset_DOCIMANv1 import DOCIMANv1
+
 # from Splicing.data.dataset_DEFACTO import DEFACTO
 # from Splicing.data.dataset_tampCOCO import tampCOCO
 # from Splicing.data.dataset_NC16 import NC16
@@ -40,7 +42,9 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_train_list.txt"))
             # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_train.txt"))
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto12k.txt"))
-            self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
+            # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
+            self.dataset_list.append(DOCIMANv1(crop_size, grid_crop, blocks, DCT_channels, "dociman_train.txt", True))
+
 
         elif mode == "valid":
             # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_valid_list.txt"))
@@ -54,7 +58,9 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_valid_list.txt"))
             # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_valid.txt"))
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto150.txt"))
-            self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
+            # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
+            self.dataset_list.append(DOCIMANv1(crop_size, grid_crop, blocks, DCT_channels, "dociman_test.txt", False))
+
 
         elif mode == "arbitrary":
             self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
