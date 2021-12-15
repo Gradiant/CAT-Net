@@ -66,9 +66,9 @@ def main():
     FULL_OPT = True
     ##working option
     if FULL_OPT:
-        args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+        args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     else:    
-        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
 
     # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
@@ -172,37 +172,37 @@ def main():
             filepath = dataset_paths['SAVE_PRED'] / filename
 
             #plot2
-            # try:
-            #     import cv2
-            #     print(get_next_filename(index))
-            #     img = cv2.imread('/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION/'+get_next_filename(index), 1)
-            #     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            #     h, w = np.shape(pred)
+            try:
+                import cv2
+                print(get_next_filename(index))
+                img = cv2.imread('/home/dperez/workspace/repos/CAT-Net/input/'+get_next_filename(index), 1)
+                gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                h, w = np.shape(pred)
 
-            #     heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
-            #     img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
+                heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
+                img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
 
-            #     fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
-            #     cv2.imwrite(str(filepath), fin)
-            # except:
-            #     print(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
+                fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
+                cv2.imwrite(str(filepath), fin)
+            except:
+                print(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
 
             del image
             del label
             torch.cuda.empty_cache()
 
             # plot
-            try:
-                width = pred.shape[1]  # in pixels
-                fig = plt.figure(frameon=False)
-                dpi = 40  # fig.dpi
-                fig.set_size_inches(width / dpi, ((width * pred.shape[0])/pred.shape[1]) / dpi)
-                sns.heatmap(pred, vmin=0, vmax=1, cbar=False, cmap='jet', )
-                plt.axis('off')
-                plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
-                plt.close(fig)
-            except:
-                print(f"Error occurred while saving output. ({get_next_filename(index)})")
+            # try:
+            #     width = pred.shape[1]  # in pixels
+            #     fig = plt.figure(frameon=False)
+            #     dpi = 40  # fig.dpi
+            #     fig.set_size_inches(width / dpi, ((width * pred.shape[0])/pred.shape[1]) / dpi)
+            #     sns.heatmap(pred, vmin=0, vmax=1, cbar=False, cmap='jet', )
+            #     plt.axis('off')
+            #     plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
+            #     plt.close(fig)
+            # except:
+            #     print(f"Error occurred while saving output. ({get_next_filename(index)})")
 
     outputfile.close()
 
