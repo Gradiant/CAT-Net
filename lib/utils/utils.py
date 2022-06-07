@@ -150,7 +150,9 @@ def get_confusion_matrix(label, pred, size, num_class, ignore=-1):
 
     ignore_index = seg_label != ignore
     seg_label = seg_label[ignore_index]
+    # print(f"Max and min values of seg_label {np.max(seg_label)} and {np.min(seg_label)}")
     seg_pred = seg_pred[ignore_index]
+    # print(f"Max and min values of seg_pred {np.max(seg_pred)} and {np.min(seg_pred)}")
 
     index = (seg_label * num_class + seg_pred).astype('int32')
     label_count = np.bincount(index)

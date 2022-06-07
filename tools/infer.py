@@ -11,6 +11,7 @@ if path not in sys.path:
 import argparse
 import pprint
 import shutil
+import cv2
 
 import logging
 import time
@@ -63,20 +64,27 @@ def main():
     # Instead of using argparse, force these args:
 
     ## CHOOSE ##
-    FULL_OPT = True
+    FULL_OPT = False
+    EXPORT_ONNX = True
     ##working option
     if FULL_OPT:
         args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
-    else:    
-        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    else:
+        # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_dociman/splicing_dataset/CAT_DCT_only/checkpoint.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])    
+        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
 
     # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
     # cudnn related setting
-    cudnn.benchmark = config.CUDNN.BENCHMARK
-    cudnn.deterministic = config.CUDNN.DETERMINISTIC
-    cudnn.enabled = config.CUDNN.ENABLED
+    if EXPORT_ONNX:
+        cudnn.benchmark = False
+        cudnn.deterministic = config.CUDNN.DETERMINISTIC
+        cudnn.enabled = False
+    else:
+        cudnn.benchmark = config.CUDNN.BENCHMARK
+        cudnn.deterministic = config.CUDNN.DETERMINISTIC
+        cudnn.enabled = config.CUDNN.ENABLED
 
     ## CHOOSE ##
     if FULL_OPT:
@@ -102,11 +110,20 @@ def main():
         criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
                                      thres=config.LOSS.OHEMTHRES,
                                      min_kept=config.LOSS.OHEMKEEP,
-                                     weight=test_dataset.class_weights).cuda()
+                                     weight=test_dataset.class_weights)
 
     else:
         criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
-                                 weight=test_dataset.class_weights).cuda(device=gpus[0])
+                                 weight=test_dataset.class_weights)
+    # if config.LOSS.USE_OHEM:
+    #     criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
+    #                                  thres=config.LOSS.OHEMTHRES,
+    #                                  min_kept=config.LOSS.OHEMKEEP,
+    #                                  weight=test_dataset.class_weights).cuda()
+
+    # else:
+    #     criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
+    #                              weight=test_dataset.class_weights).cuda(device=gpus[0])
 
     model = eval('models.' + config.MODEL.NAME +
                  '.get_seg_model')(config)
@@ -118,10 +135,17 @@ def main():
     print('=> loading model from {}'.format(model_state_file))
 
     model = FullModel(model, criterion)
-    checkpoint = torch.load(model_state_file, map_location='cuda:0')
+
+    if EXPORT_ONNX:
+        checkpoint = torch.load(model_state_file, map_location='cpu')
+    else:
+        checkpoint = torch.load(model_state_file, map_location='cuda:0')
 
     model.model.load_state_dict(checkpoint['state_dict'])
-    model = nn.DataParallel(model, device_ids=gpus).cuda()
+
+
+    if not EXPORT_ONNX:
+        model = nn.DataParallel(model, device_ids=gpus).cuda()
     dataset_paths['SAVE_PRED'].mkdir(parents=True, exist_ok=True)
 
 
@@ -149,46 +173,83 @@ def main():
             print("Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
             
             mb_size = label.size()[1]*label.size()[2]/1000000
-            if mb_size > 8.3:
+            if mb_size > 8.8:
                 print("Skip image, too big image!")
                 continue
             
             size = label.size()
-            image = image.cuda()
-            label = label.long().cuda()
+            if not EXPORT_ONNX:
+                image = image.cuda()
+                label = label.long().cuda()
+            
             model.eval()
+
+            if EXPORT_ONNX:
+                print("Convert to ONNX!!!!!!!!!!!!!!")
+                ###############export to ONNX##############
+                torch.onnx.export(model, (image, label, qtable) , "CATNET_DCT_only.onnx", opset_version = 12)
+                print("ONNX created...")
+                exit(-1)
             _, pred = model(image, label, qtable)
+
+
+
             pred = torch.squeeze(pred, 0)
             pred = F.softmax(pred, dim=0)[1]
-            pred = pred.cpu().numpy()
+            pred = pred.cpu().numpy() 
+
+            # CUSTOM THRESHOLD
+            # pred = F.upsample(input=pred, size=(size[-2], size[-1]), mode='bilinear')
+            # output_logits = pred.cpu().numpy().transpose(0, 2, 3, 1)
+            # exp_array = np.exp(output_logits)
+            # output =  exp_array / (1+ exp_array)
+            # _,w, h, _ = np.shape(output)
+
+            TH_BIN = 0.5
+            pred_bin = np.array(pred)
+            pred_bin[pred > TH_BIN] = 1
+            pred_bin[pred <= TH_BIN] = 0
+            #########################
 
             width_im, heigh_im = np.shape(pred)
-            print("% mod {:.2f}% and max value {}".format(100*pred.sum()/(width_im*heigh_im), pred.max()))
+            print("% mod {:.2f}% and max value {}".format(100*pred_bin.sum()/(width_im*heigh_im), pred.max()))
 
             outputfile.write("{},{},{}\n".format(get_next_filename(index), pred.sum()/(width_im*heigh_im), pred.max()))
 
             # filename
             filename = os.path.splitext(get_next_filename(index))[0] + ".png"
+            filename_pred = os.path.splitext(get_next_filename(index))[0] + "_pred.png"
+
+            filepath_pred = dataset_paths['SAVE_PRED'] / filename_pred
             filepath = dataset_paths['SAVE_PRED'] / filename
 
+
+            
+            # print(f"Saving prediction in {filepath_pred}")
+            # cv2.imwrite(str(filepath_pred), pred*255.0)
             #plot2
             try:
-                import cv2
+                
                 print(get_next_filename(index))
-                img = cv2.imread('/home/dperez/workspace/repos/CAT-Net/input/'+get_next_filename(index), 1)
-                gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                img = cv2.imread('/home/dperez/workspace/customer/'+get_next_filename(index), 1)
+                if len(np.shape(img))>2:
+                    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                else:
+                    gray_img = img
+                    color_img = cv2.cvtColor(img, cv2.CV_GRAY2RGB)
+                    img = color_img
                 h, w = np.shape(pred)
 
                 heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
                 img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
-
                 fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
-                cv2.imwrite(str(filepath), fin)
+                fin_resized = cv2.resize(fin, (w*6,h*6), interpolation = cv2.INTER_CUBIC)
+                cv2.imwrite(str(filepath), fin_resized)
             except:
                 print(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
 
-            del image
-            del label
+            # del image
+            # del label
             torch.cuda.empty_cache()
 
             # plot

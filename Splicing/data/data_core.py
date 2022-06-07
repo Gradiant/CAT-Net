@@ -59,12 +59,14 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_valid.txt"))
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto150.txt"))
             # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
-            self.dataset_list.append(DOCIMANv1(crop_size, grid_crop, blocks, DCT_channels, "dociman_test.txt", False))
+            self.dataset_list.append(DOCIMANv1(crop_size, grid_crop, blocks, DCT_channels, "dociman_test.txt", False)) 
 
 
         elif mode == "arbitrary":
-            self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/genuine//*", read_from_jpeg=read_from_jpeg))
+            # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/media/BM/databases/dociman/DOCIMANv1/single/Protected///*", read_from_jpeg=read_from_jpeg))
+            
+            # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input_dct//*", read_from_jpeg=read_from_jpeg))
+            self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/customer//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/copymove//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION//*", read_from_jpeg=read_from_jpeg))
         else:

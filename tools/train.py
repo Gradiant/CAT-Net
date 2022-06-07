@@ -67,8 +67,8 @@ def train_model():
     # args = parse_args()
     # Instead of using argparse, force these args:
     ## CHOOSE ##
-    args = argparse.Namespace(cfg='experiments/CAT_full.yaml', local_rank=0, opts=None)
-    # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', local_rank=0, opts=None)
+    # args = argparse.Namespace(cfg='experiments/CAT_full.yaml', local_rank=0, opts=None)
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', local_rank=0, opts=None)
 
     update_config(config, args)
 
@@ -104,8 +104,8 @@ def train_model():
     crop_size = (config.TRAIN.IMAGE_SIZE[1], config.TRAIN.IMAGE_SIZE[0])
     if config.DATASET.DATASET == 'splicing_dataset':
         ## CHOOSE ##
-        train_dataset = splicing_dataset(crop_size=crop_size, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), mode='train', DCT_channels=1, read_from_jpeg=True, class_weight=[0.5, 2.5])  # full model
-        # train_dataset = splicing_dataset(crop_size=crop_size, grid_crop=True, blocks=('DCTvol', 'qtable'), mode='train', DCT_channels=1, read_from_jpeg=True, class_weight=[0.5, 2.5])  # only DCT stream
+        # train_dataset = splicing_dataset(crop_size=crop_size, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), mode='train', DCT_channels=1, read_from_jpeg=True, class_weight=[0.5, 2.5])  # full model
+        train_dataset = splicing_dataset(crop_size=crop_size, grid_crop=True, blocks=('DCTvol', 'qtable'), mode='train', DCT_channels=1, read_from_jpeg=True, class_weight=[0.5, 2.5])  # only DCT stream
         logger.info(train_dataset.get_info())
     else:
         raise ValueError("Not supported dataset type.")
@@ -120,8 +120,8 @@ def train_model():
 
     # validation
     ## CHOOSE ##
-    valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # full model
-    # valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # only DCT stream
+    # valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('RGB', 'DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # full model
+    valid_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), mode="valid", DCT_channels=1, read_from_jpeg=True)  # only DCT stream
 
     print(" ***=> DATALOADER val")
 
@@ -197,7 +197,7 @@ def train_model():
 
         # Valid
         #if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
-        if epoch % 2 == 0:
+        if epoch % 10 == 0:
             # writer_dict['valid_global_steps'] = epoch
             valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_avg, prec_avg, recall_avg = \
                 validate(config, validloader, model, writer_dict, "valid")

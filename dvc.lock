@@ -31,38 +31,38 @@ stages:
       --output_masks_dir results/data/transform/coco_to_mmsegmentation-dociman/masks/val
     deps:
     - path: results/data/transform/split/dociman_val.json
-      md5: 6022677e198cbaa1ce4ccf30aec6868f
-      size: 167757955
+      md5: 3eeda99a409b1583e9dd225ac51109dd
+      size: 76582437
     - path: stages/data/transform/coco_to_mmsegmentation.py
       md5: 8d04c9d8d9085d9f83617b4e9dcd8379
       size: 3512
     outs:
     - path: results/data/transform/coco_to_mmsegmentation-dociman/dociman_val.txt
-      md5: 641908ad91d3ab6776b09d5db11398fa
-      size: 19788188
+      md5: 392b4ab975d657a8bcdc8f065dce223a
+      size: 7710690
     - path: results/data/transform/coco_to_mmsegmentation-dociman/masks/val
-      md5: 82d562c65c1f203a5ae5d656b32d4a4c.dir
-      size: 155175085
-      nfiles: 324974
+      md5: bcd3688939fdf09c925c148d8d450181.dir
+      size: 72118735
+      nfiles: 151034
   coco-to-mmsegmentation@test:
     cmd: python stages/data/transform/coco_to_mmsegmentation.py --annotations_file
       results/data/transform/split/dociman_test.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-dociman/dociman_test.txt
       --output_masks_dir results/data/transform/coco_to_mmsegmentation-dociman/masks/test
     deps:
     - path: results/data/transform/split/dociman_test.json
-      md5: 6022677e198cbaa1ce4ccf30aec6868f
-      size: 167757955
+      md5: 3eeda99a409b1583e9dd225ac51109dd
+      size: 76582437
     - path: stages/data/transform/coco_to_mmsegmentation.py
       md5: 8d04c9d8d9085d9f83617b4e9dcd8379
       size: 3512
     outs:
     - path: results/data/transform/coco_to_mmsegmentation-dociman/dociman_test.txt
-      md5: 641908ad91d3ab6776b09d5db11398fa
-      size: 19788188
+      md5: 392b4ab975d657a8bcdc8f065dce223a
+      size: 7710690
     - path: results/data/transform/coco_to_mmsegmentation-dociman/masks/test
-      md5: 82d562c65c1f203a5ae5d656b32d4a4c.dir
-      size: 155175085
-      nfiles: 324974
+      md5: bcd3688939fdf09c925c148d8d450181.dir
+      size: 72118735
+      nfiles: 151034
   coco-to-mmsegmentation@train:
     cmd: python stages/data/transform/coco_to_mmsegmentation.py --annotations_file
       results/data/transform/split/dociman_train.json --output_annotations_file results/data/transform/coco_to_mmsegmentation-dociman/dociman_train.txt

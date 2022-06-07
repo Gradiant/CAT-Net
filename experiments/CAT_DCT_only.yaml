@@ -3,7 +3,7 @@ CUDNN:
   DETERMINISTIC: false
   ENABLED: true
 GPUS: (2,)
-OUTPUT_DIR: 'output'
+OUTPUT_DIR: 'output_single'
 LOG_DIR: 'log'
 WORKERS: 1
 PRINT_FREQ: 1
@@ -13,9 +13,9 @@ DATASET:
   NUM_CLASSES: 2
 MODEL:
   NAME: network_DCT
-  PRETRAINED_RGB: 'pretrained_models/hrnetv2_w48_imagenet_pretrained.pth'
-  PRETRAINED_DCT: 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar'
-  # PRETRAINED_DCT: 'pretrained_models/DCT_djpeg.pth.tar'
+  PRETRAINED_RGB: 'nopretrained_models/hrnetv2_w48_imagenet_pretrained.pth'
+  PRETRAINED_DCT: 'output_orig/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth'
+  # PRETRAINED_DCT: 'output_dociman/splicing_dataset/CAT_DCT_only/checkpoint.pth.tar'
   EXTRA:
     FINAL_CONV_KERNEL: 1
     STAGE1:
@@ -111,16 +111,16 @@ LOSS:
   OHEMKEEP: 131072
 TRAIN:
   IMAGE_SIZE:
-  - 512
-  - 512
-  BASE_SIZE: 512
-  BATCH_SIZE_PER_GPU: 11
+  - 256
+  - 256
+  BASE_SIZE: 256
+  BATCH_SIZE_PER_GPU: 3
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 200
+  END_EPOCH: 50
   RESUME: true
   OPTIMIZER: sgd
-  LR: 0.005
+  LR: 0.001 #0.005
   WD: 0.0005
   MOMENTUM: 0.9
   NESTEROV: false
@@ -131,10 +131,10 @@ TRAIN:
   SCALE_FACTOR: 11
 TEST:
   IMAGE_SIZE:
-  - 512
-  - 512
-  BASE_SIZE: 512
-  BATCH_SIZE_PER_GPU: 22
+  - 256
+  - 256
+  BASE_SIZE: 256
+  BATCH_SIZE_PER_GPU: 3
   NUM_SAMPLES: 2000
   FLIP_TEST: false
   MULTI_SCALE: false

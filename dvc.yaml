@@ -1,37 +1,37 @@
 stages:
- data-transform-split-dociman:
-    cmd: python stages/data/transform/split_from_annots.py
-      --annotations_file results/data/import/DOCIMANv1_segmentation.json
-      --folders_train "["Fileiscorruptedorinvalid", "VeryLow", "WithoutMarks", "High", "Medium"]"
-      --folders_test "["Protected", "High200", "Nohanpodidoniseprocesados", "Errorwhileprocessingthefile", "Low"]"
-      --folders_val "["Protected", "High200", "Nohanpodidoniseprocesados", "Errorwhileprocessingthefile", "Low"]"
-      --output_train_file results/data/transform/split/dociman_train_prueba.json
-      --output_test_file results/data/transform/split/dociman_test_prueba.json
-      --output_val_file results/data/transform/split/dociman_val_prueba.json
-    deps:
-      - stages/data/transform/split_from_file.py
-      - results/data/import/DOCIMANv1_segmentation.json
-    outs:
-      - results/data/transform/split/dociman_train_prueba.json
-      - results/data/transform/split/dociman_test_prueba.json
-      - results/data/transform/split/dociman_val_prueba.json
+#  data-transform-split-dociman:
+#     cmd: python stages/data/transform/split_from_annots.py
+#       --annotations_file results/data/import/DOCIMANv1_segmentation.json
+#       --folders_train "["Fileiscorruptedorinvalid", "VeryLow", "WithoutMarks", "High", "Medium"]"
+#       --folders_test "["Protected", "High200", "Nohanpodidoniseprocesados", "Errorwhileprocessingthefile", "Low"]"
+#       --folders_val "["Protected", "High200", "Nohanpodidoniseprocesados", "Errorwhileprocessingthefile", "Low"]"
+#       --output_train_file results/data/transform/split/dociman_train_prueba.json
+#       --output_test_file results/data/transform/split/dociman_test_prueba.json
+#       --output_val_file results/data/transform/split/dociman_val_prueba.json
+#     deps:
+#       - stages/data/transform/split_from_file.py
+#       - results/data/import/DOCIMANv1_segmentation.json
+#     outs:
+#       - results/data/transform/split/dociman_train_prueba.json
+#       - results/data/transform/split/dociman_test_prueba.json
+#       - results/data/transform/split/dociman_val_prueba.json
   
- coco-to-mmsegmentation:
-    foreach:
-      - train
-      - test
-      - val
-    do:
-      cmd: python stages/data/transform/coco_to_mmsegmentation.py
-        --annotations_file results/data/transform/split/dociman_${item}.json
-        --output_annotations_file results/data/transform/coco_to_mmsegmentation-dociman/dociman_${item}.txt
-        --output_masks_dir results/data/transform/coco_to_mmsegmentation-dociman/masks/${item}
-      deps:
-        - stages/data/transform/coco_to_mmsegmentation.py
-        - results/data/transform/split/dociman_${item}.json
-      outs:
-        - results/data/transform/coco_to_mmsegmentation-dociman/dociman_${item}.txt
-        - results/data/transform/coco_to_mmsegmentation-dociman/masks/${item}
+#  coco-to-mmsegmentation:
+#     foreach:
+#       - train
+#       - test
+#       - val
+#     do:
+#       cmd: python stages/data/transform/coco_to_mmsegmentation.py
+#         --annotations_file results/data/transform/split/dociman_${item}.json
+#         --output_annotations_file results/data/transform/coco_to_mmsegmentation-dociman/dociman_${item}.txt
+#         --output_masks_dir results/data/transform/coco_to_mmsegmentation-dociman/masks/${item}
+#       deps:
+#         - stages/data/transform/coco_to_mmsegmentation.py
+#         - results/data/transform/split/dociman_${item}.json
+#       outs:
+#         - results/data/transform/coco_to_mmsegmentation-dociman/dociman_${item}.txt
+#         - results/data/transform/coco_to_mmsegmentation-dociman/masks/${item}
 
  run_experiment_mlflow:
     cmd: export MLFLOW_TRACKING_URI="http://10.10.30.58:8999/" && export CUDA_VISIBLE_DEVICES="3" &&

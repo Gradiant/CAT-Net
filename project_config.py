@@ -34,7 +34,7 @@ dataset_paths = {
     # 'COVERAGE': dataset_root / "COVERAGE",
     # 'CoMoFoD': dataset_root / "CoMoFoD_small_v2",
     # 'GRIP': dataset_root / "CMFDdb_grip",
-    'SAVE_PRED': project_root / "output_pred"
+    'SAVE_PRED': project_root / "output_single"
 }
 
 
