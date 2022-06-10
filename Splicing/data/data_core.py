@@ -25,7 +25,7 @@ from Splicing.data.dataset_DOCIMANv1 import DOCIMANv1
 # from Splicing.data.dataset_CoMoFoD import CoMoFoD
 # from Splicing.data.dataset_GRIP import GRIP
 from Splicing.data.dataset_arbitrary import arbitrary
-
+from project_config import dataset_paths
 
 class SplicingDataset(Dataset):
     def __init__(self, crop_size, grid_crop, blocks=('RGB',), mode="train", DCT_channels=3, read_from_jpeg=False, class_weight=None):
@@ -66,7 +66,7 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/media/BM/databases/dociman/DOCIMANv1/single/Protected///*", read_from_jpeg=read_from_jpeg))
             
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input_dct//*", read_from_jpeg=read_from_jpeg))
-            self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/customer//*", read_from_jpeg=read_from_jpeg))
+            self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, dataset_paths['LOAD_FOLDER']+"//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/copymove//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION//*", read_from_jpeg=read_from_jpeg))
         else:

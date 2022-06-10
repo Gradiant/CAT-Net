@@ -169,6 +169,7 @@ class AbstractDataset(ABC):
         # handle 'DCTvol'
         if 'DCTvol' in self._blocks:
             T = 20
+            print(f"*************** dct coef shape {t_DCT_coef.size()}")
             t_DCT_vol = torch.zeros(size=(T+1, t_DCT_coef.shape[1], t_DCT_coef.shape[2]))
             t_DCT_vol[0] += (t_DCT_coef == 0).float().squeeze()
             for i in range(1, T):
@@ -176,6 +177,7 @@ class AbstractDataset(ABC):
                 t_DCT_vol[i] += (t_DCT_coef == -i).float().squeeze()
             t_DCT_vol[T] += (t_DCT_coef >= T).float().squeeze()
             t_DCT_vol[T] += (t_DCT_coef <= -T).float().squeeze()
+            print(f"*************** dct vol shape {t_DCT_vol.size()}")
 
         # create tensor
         img_block = []
@@ -193,6 +195,7 @@ class AbstractDataset(ABC):
 
         # final tensor
         tensor = torch.cat(img_block)
+        print(f"*************** Tensor shape {tensor.size()}")
 
         if 'qtable' not in self._blocks:
             return tensor, torch.tensor(mask, dtype=torch.long), 0

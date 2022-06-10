@@ -40,6 +40,16 @@ from project_config import dataset_paths
 import seaborn as sns; sns.set_theme()
 import matplotlib.pyplot as plt
 import os
+from loguru import logger
+
+
+def softmax(x):
+    
+    max = np.max(x,axis=1,keepdims=True) #returns max of each row and keeps same dims
+    e_x = np.exp(x - max) #subtracts each row with its max value
+    sum = np.sum(e_x,axis=1,keepdims=True) #returns sum of each row and keeps same dims
+    f_x = e_x / sum 
+    return f_x
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -65,19 +75,23 @@ def main():
 
     ## CHOOSE ##
     FULL_OPT = False
-    EXPORT_ONNX = True
+    EXPORT_ONNX = False
+    SAVE_CSV_RESULTS = False
+    #use cat_2 environment in gea2 to export to ONNX
+    onnx_created = False
+
     ##working option
     if FULL_OPT:
         args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     else:
-        # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_dociman/splicing_dataset/CAT_DCT_only/checkpoint.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])    
         args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
 
-    # args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
     # cudnn related setting
     if EXPORT_ONNX:
+        import onnx
+        import onnxruntime as ort   
         cudnn.benchmark = False
         cudnn.deterministic = config.CUDNN.DETERMINISTIC
         cudnn.enabled = False
@@ -106,24 +120,26 @@ def main():
     gpus[0] = 0
 
     # criterion
-    if config.LOSS.USE_OHEM:
-        criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
+    if EXPORT_ONNX:
+        if config.LOSS.USE_OHEM:
+            criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
+                                        thres=config.LOSS.OHEMTHRES,
+                                        min_kept=config.LOSS.OHEMKEEP,
+                                        weight=test_dataset.class_weights)
+
+        else:
+            criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
+                                    weight=test_dataset.class_weights)
+    else:
+        if config.LOSS.USE_OHEM:
+            criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
                                      thres=config.LOSS.OHEMTHRES,
                                      min_kept=config.LOSS.OHEMKEEP,
-                                     weight=test_dataset.class_weights)
+                                     weight=test_dataset.class_weights).cuda()
+        else:
+            criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
+                                    weight=test_dataset.class_weights).cuda(device=gpus[0])
 
-    else:
-        criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
-                                 weight=test_dataset.class_weights)
-    # if config.LOSS.USE_OHEM:
-    #     criterion = OhemCrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
-    #                                  thres=config.LOSS.OHEMTHRES,
-    #                                  min_kept=config.LOSS.OHEMKEEP,
-    #                                  weight=test_dataset.class_weights).cuda()
-
-    # else:
-    #     criterion = CrossEntropy(ignore_label=config.TRAIN.IGNORE_LABEL,
-    #                              weight=test_dataset.class_weights).cuda(device=gpus[0])
 
     model = eval('models.' + config.MODEL.NAME +
                  '.get_seg_model')(config)
@@ -132,14 +148,13 @@ def main():
         model_state_file = config.TEST.MODEL_FILE
     else:
         raise ValueError("Model file is not specified.")
-    print('=> loading model from {}'.format(model_state_file))
+    logger.info('=> loading model from {}'.format(model_state_file))
 
+    two_inputs_model = model
     model = FullModel(model, criterion)
 
-    if EXPORT_ONNX:
-        checkpoint = torch.load(model_state_file, map_location='cpu')
-    else:
-        checkpoint = torch.load(model_state_file, map_location='cuda:0')
+    map_location = 'cpu' if EXPORT_ONNX else 'cuda:0'
+    checkpoint = torch.load(model_state_file, map_location=map_location)
 
     model.model.load_state_dict(checkpoint['state_dict'])
 
@@ -161,20 +176,23 @@ def main():
             name = os.path.split(name)[-1]
             return name
 
-    outputfile = open("catnetresultscopymove.csv","w")
-    outputfile.write("filename,sum,max\n")
+    if SAVE_CSV_RESULTS:
+        outputfile = open("catnetresultscopymove.csv","w")
+        outputfile.write("filename,sum,max\n")
+        
 
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
-            print("load file : {}".format(get_next_filename(index)))
+            logger.info("Load input file : {}".format(get_next_filename(index)))
             if 'mask' in get_next_filename(index):
                 print("skip mask")
                 continue
-            print("Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
-            
+            logger.info(" *** Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
+            logger.info(" *** Shape of input {}".format(image.size()))
+
             mb_size = label.size()[1]*label.size()[2]/1000000
             if mb_size > 8.8:
-                print("Skip image, too big image!")
+                logger.info(" *** Skip image, too big image!")
                 continue
             
             size = label.size()
@@ -185,18 +203,38 @@ def main():
             model.eval()
 
             if EXPORT_ONNX:
-                print("Convert to ONNX!!!!!!!!!!!!!!")
-                ###############export to ONNX##############
-                torch.onnx.export(model, (image, label, qtable) , "CATNET_DCT_only.onnx", opset_version = 12)
-                print("ONNX created...")
-                exit(-1)
-            _, pred = model(image, label, qtable)
+                if not onnx_created:
+                    logger.info("... Saving ONNX model")
+                    torch.onnx.export(two_inputs_model, (image, qtable) , "CATNET_DCT_only.onnx", opset_version = 14,  input_names = ['image','qtable'])
+                    onnx_created = True
+                logger.info("... Loading ONNX model")
+                onnx_model = onnx.load("CATNET_DCT_only.onnx")
+                # onnx.checker.check_model(onnx_model)
 
+                inputs = {}
+                for inp in onnx_model.graph.input:
+                    shape = str(inp.type.tensor_type.shape.dim)
+                    inputs[inp.name] = [int(s) for s in shape.split() if s.isdigit()]
 
+                providers = [
+                    'CPUExecutionProvider',
+                ]
+                ort_sess = ort.InferenceSession('CATNET_DCT_only.onnx',providers=providers)
+                inputs_onnx = {'image': image.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
+                # inputs_onnx = {'image': image.cpu().detach().numpy(),'label': label.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
+                outputs = ort_sess.run(None, inputs_onnx)
+                pred_s = np.squeeze(outputs)
+                pred = (softmax(pred_s.T).T)[1]
+                # https://onnxruntime.ai/docs/get-started/with-python.html
 
-            pred = torch.squeeze(pred, 0)
-            pred = F.softmax(pred, dim=0)[1]
-            pred = pred.cpu().numpy() 
+            else:
+                _, pred = model(image, label, qtable)
+
+                print(pred.size())
+                pred = torch.squeeze(pred, 0)
+
+                pred = F.softmax(pred, dim=0)[1]
+                pred = pred.cpu().numpy() 
 
             # CUSTOM THRESHOLD
             # pred = F.upsample(input=pred, size=(size[-2], size[-1]), mode='bilinear')
@@ -212,9 +250,10 @@ def main():
             #########################
 
             width_im, heigh_im = np.shape(pred)
-            print("% mod {:.2f}% and max value {}".format(100*pred_bin.sum()/(width_im*heigh_im), pred.max()))
+            logger.info("% mod {:.2f}% and max value {}".format(100*pred_bin.sum()/(width_im*heigh_im), pred.max()))
 
-            outputfile.write("{},{},{}\n".format(get_next_filename(index), pred.sum()/(width_im*heigh_im), pred.max()))
+            if SAVE_CSV_RESULTS:
+                outputfile.write("{},{},{}\n".format(get_next_filename(index), pred.sum()/(width_im*heigh_im), pred.max()))
 
             # filename
             filename = os.path.splitext(get_next_filename(index))[0] + ".png"
@@ -222,16 +261,13 @@ def main():
 
             filepath_pred = dataset_paths['SAVE_PRED'] / filename_pred
             filepath = dataset_paths['SAVE_PRED'] / filename
-
-
             
-            # print(f"Saving prediction in {filepath_pred}")
-            # cv2.imwrite(str(filepath_pred), pred*255.0)
+            print(f"... Saving prediction in {filepath_pred}")
+            cv2.imwrite(str(filepath_pred), pred*255.0)
             #plot2
             try:
                 
-                print(get_next_filename(index))
-                img = cv2.imread('/home/dperez/workspace/customer/'+get_next_filename(index), 1)
+                img = cv2.imread( dataset_paths['LOAD_FOLDER']+get_next_filename(index), 1)
                 if len(np.shape(img))>2:
                     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 else:
@@ -244,28 +280,15 @@ def main():
                 img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
                 fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
                 fin_resized = cv2.resize(fin, (w*6,h*6), interpolation = cv2.INTER_CUBIC)
+                
                 cv2.imwrite(str(filepath), fin_resized)
             except:
-                print(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
+                logger.info(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
 
-            # del image
-            # del label
             torch.cuda.empty_cache()
 
-            # plot
-            # try:
-            #     width = pred.shape[1]  # in pixels
-            #     fig = plt.figure(frameon=False)
-            #     dpi = 40  # fig.dpi
-            #     fig.set_size_inches(width / dpi, ((width * pred.shape[0])/pred.shape[1]) / dpi)
-            #     sns.heatmap(pred, vmin=0, vmax=1, cbar=False, cmap='jet', )
-            #     plt.axis('off')
-            #     plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
-            #     plt.close(fig)
-            # except:
-            #     print(f"Error occurred while saving output. ({get_next_filename(index)})")
-
-    outputfile.close()
+    if SAVE_CSV_RESULTS:
+        outputfile.close()
 
 if __name__ == '__main__':
     main()
