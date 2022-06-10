@@ -221,7 +221,6 @@ def main():
                 ]
                 ort_sess = ort.InferenceSession('CATNET_DCT_only.onnx',providers=providers)
                 inputs_onnx = {'image': image.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
-                # inputs_onnx = {'image': image.cpu().detach().numpy(),'label': label.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
                 outputs = ort_sess.run(None, inputs_onnx)
                 pred_s = np.squeeze(outputs)
                 pred = (softmax(pred_s.T).T)[1]
@@ -229,8 +228,6 @@ def main():
 
             else:
                 _, pred = model(image, label, qtable)
-
-                print(pred.size())
                 pred = torch.squeeze(pred, 0)
 
                 pred = F.softmax(pred, dim=0)[1]
