@@ -408,12 +408,13 @@ class DCT_Stream(nn.Module):
         x = self.dc_layer0_dil(DCTcoef)
         x = self.dc_layer1_tail(x)
         B, C, H, W = x.shape
-        x0 = x.reshape(B, C, H // 8, 8, W // 8, 8).permute(0, 1, 3, 5, 2, 4).reshape(B, 64 * C, H // 8,
-                                                                                     W // 8)  # [B, 256, 32, 32]
-        x_temp = x.reshape(B, C, H // 8, 8, W // 8, 8).permute(0, 1, 3, 5, 2, 4)  # [B, C, 8, 8, 32, 32]
+        H_8 = torch.div(H, 8, rounding_mode="floor")
+        W_8 = torch.div(W, 8, rounding_mode="floor")
+        x0 = x.reshape(B, C, H_8, 8, W_8, 8).permute(0, 1, 3, 5, 2, 4).reshape(B, 64 * C, H_8, W_8) # [B, 256, 32, 32]
+        x_temp = x.reshape(B, C, H_8, 8, W_8, 8).permute(0, 1, 3, 5, 2, 4)  # [B, C, 8, 8, 32, 32]
         q_temp = qtable.unsqueeze(-1).unsqueeze(-1)  # [B, 1, 8, 8, 1, 1]
         xq_temp = x_temp * q_temp  # [B, C, 8, 8, 32, 32]
-        x1 = xq_temp.reshape(B, 64 * C, H // 8, W // 8)  # [B, 256, 32, 32]
+        x1 = xq_temp.reshape(B, 64 * C, H_8, W_8)  # [B, 256, 32, 32]
         x = torch.cat([x0, x1], dim=1)
         x = self.dc_layer2(x)  # x.shape = torch.Size([1, 96, 64, 64])
 

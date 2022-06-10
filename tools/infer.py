@@ -75,8 +75,10 @@ def main():
 
     ## CHOOSE ##
     FULL_OPT = False
-    EXPORT_ONNX = False
+    EXPORT_ONNX = True
+    COMPARE_ONNX_PTH = True
     SAVE_CSV_RESULTS = False
+    SAVE_MAPS = True
     #use cat_2 environment in gea2 to export to ONNX
     onnx_created = False
 
@@ -205,10 +207,12 @@ def main():
             if EXPORT_ONNX:
                 if not onnx_created:
                     logger.info("... Saving ONNX model")
-                    torch.onnx.export(two_inputs_model, (image, qtable) , "CATNET_DCT_only.onnx", opset_version = 14,  input_names = ['image','qtable'])
+                    dynamic_axes = {'image':{0:'batch_size' , 2:'width', 3:'height'}, 'qtable':{0:'batch_size' , 2:'width', 3:'height'}}
+                    torch.onnx.export(two_inputs_model, (image, qtable) , "CATNET_DCT_only.onnx", opset_version = 14,  input_names = ['image','qtable'], dynamic_axes=dynamic_axes)
                     onnx_created = True
                 logger.info("... Loading ONNX model")
                 onnx_model = onnx.load("CATNET_DCT_only.onnx")
+                print(onnx_model.graph.input[0].type.tensor_type.shape.dim)
                 # onnx.checker.check_model(onnx_model)
 
                 inputs = {}
@@ -226,61 +230,71 @@ def main():
                 pred = (softmax(pred_s.T).T)[1]
                 # https://onnxruntime.ai/docs/get-started/with-python.html
 
-            else:
+                if COMPARE_ONNX_PTH:
+                    pred_onnx = pred
+
+            if COMPARE_ONNX_PTH or not EXPORT_ONNX:
+            
                 _, pred = model(image, label, qtable)
                 pred = torch.squeeze(pred, 0)
-
                 pred = F.softmax(pred, dim=0)[1]
                 pred = pred.cpu().numpy() 
 
-            # CUSTOM THRESHOLD
-            # pred = F.upsample(input=pred, size=(size[-2], size[-1]), mode='bilinear')
-            # output_logits = pred.cpu().numpy().transpose(0, 2, 3, 1)
-            # exp_array = np.exp(output_logits)
-            # output =  exp_array / (1+ exp_array)
-            # _,w, h, _ = np.shape(output)
+                im_h = cv2.hconcat([pred, pred_onnx])
+                filename_pred = os.path.splitext(get_next_filename(index))[0] + "_comparemodels.png"
+                cv2.imwrite(str(dataset_paths['SAVE_PRED'] / filename_pred), im_h*255.0)
 
-            TH_BIN = 0.5
-            pred_bin = np.array(pred)
-            pred_bin[pred > TH_BIN] = 1
-            pred_bin[pred <= TH_BIN] = 0
-            #########################
+            if SAVE_MAPS:
+                if EXPORT_ONNX and COMPARE_ONNX_PTH:
+                    pred = pred_onnx
+                # CUSTOM THRESHOLD
+                # pred = F.upsample(input=pred, size=(size[-2], size[-1]), mode='bilinear')
+                # output_logits = pred.cpu().numpy().transpose(0, 2, 3, 1)
+                # exp_array = np.exp(output_logits)
+                # output =  exp_array / (1+ exp_array)
+                # _,w, h, _ = np.shape(output)
 
-            width_im, heigh_im = np.shape(pred)
-            logger.info("% mod {:.2f}% and max value {}".format(100*pred_bin.sum()/(width_im*heigh_im), pred.max()))
+                TH_BIN = 0.5
+                pred_bin = np.array(pred)
+                pred_bin[pred > TH_BIN] = 1
+                pred_bin[pred <= TH_BIN] = 0
+                #########################
 
-            if SAVE_CSV_RESULTS:
-                outputfile.write("{},{},{}\n".format(get_next_filename(index), pred.sum()/(width_im*heigh_im), pred.max()))
+                width_im, heigh_im = np.shape(pred)
+                logger.info("% mod {:.2f}% and max value {}".format(100*pred_bin.sum()/(width_im*heigh_im), pred.max()))
 
-            # filename
-            filename = os.path.splitext(get_next_filename(index))[0] + ".png"
-            filename_pred = os.path.splitext(get_next_filename(index))[0] + "_pred.png"
+                if SAVE_CSV_RESULTS:
+                    outputfile.write("{},{},{}\n".format(get_next_filename(index), pred.sum()/(width_im*heigh_im), pred.max()))
 
-            filepath_pred = dataset_paths['SAVE_PRED'] / filename_pred
-            filepath = dataset_paths['SAVE_PRED'] / filename
-            
-            print(f"... Saving prediction in {filepath_pred}")
-            cv2.imwrite(str(filepath_pred), pred*255.0)
-            #plot2
-            try:
+                # filename
+                filename = os.path.splitext(get_next_filename(index))[0] + ".png"
+                filename_pred = os.path.splitext(get_next_filename(index))[0] + "_pred.png"
+
+                filepath_pred = dataset_paths['SAVE_PRED'] / filename_pred
+                filepath = dataset_paths['SAVE_PRED'] / filename
                 
-                img = cv2.imread( dataset_paths['LOAD_FOLDER']+get_next_filename(index), 1)
-                if len(np.shape(img))>2:
-                    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                else:
-                    gray_img = img
-                    color_img = cv2.cvtColor(img, cv2.CV_GRAY2RGB)
-                    img = color_img
-                h, w = np.shape(pred)
+                print(f"... Saving prediction in {filepath_pred}")
+                cv2.imwrite(str(filepath_pred), pred*255.0)
+                #plot2
+                try:
+                    
+                    img = cv2.imread( dataset_paths['LOAD_FOLDER']+get_next_filename(index), 1)
+                    if len(np.shape(img))>2:
+                        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    else:
+                        gray_img = img
+                        color_img = cv2.cvtColor(img, cv2.CV_GRAY2RGB)
+                        img = color_img
+                    h, w = np.shape(pred)
 
-                heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
-                img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
-                fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
-                fin_resized = cv2.resize(fin, (w*6,h*6), interpolation = cv2.INTER_CUBIC)
-                
-                cv2.imwrite(str(filepath), fin_resized)
-            except:
-                logger.info(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
+                    heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
+                    img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
+                    fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
+                    fin_resized = cv2.resize(fin, (w*6,h*6), interpolation = cv2.INTER_CUBIC)
+                    
+                    cv2.imwrite(str(filepath), fin_resized)
+                except:
+                    logger.info(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
 
             torch.cuda.empty_cache()
 
