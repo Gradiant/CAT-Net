@@ -39,7 +39,7 @@ from pathlib import Path
 from project_config import dataset_paths
 import seaborn as sns; sns.set_theme()
 import matplotlib.pyplot as plt
-import os
+import os, sys
 from loguru import logger
 
 
@@ -102,8 +102,19 @@ def _onnx_inference(image, qtable, filename_onnx):
     ort_sess = ort.InferenceSession(filename_onnx, providers=providers)
     inputs_onnx = {'image': image.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
     outputs = ort_sess.run(None, inputs_onnx)
-    pred_s = np.squeeze(outputs)
-    pred = (softmax(pred_s.T).T)[1]
+
+    torch_output = torch.from_numpy(np.array(outputs))
+    print(torch_output.size())
+    pred = torch.squeeze(torch_output, 0)
+    print(pred.size())
+    pred = torch.squeeze(pred, 0)
+    print(pred.size())
+    pred = F.softmax(pred, dim=0)[1]
+    print(pred.size())
+    pred = pred.cpu().numpy()
+
+    # pred_s = np.squeeze(outputs)
+    # pred = (softmax(pred_s.T).T)[1]
     # https://onnxruntime.ai/docs/get-started/with-python.html
     return pred
 
@@ -159,7 +170,7 @@ def main():
 
     # cudnn related setting
     if EXPORT_ONNX:
-        import onnx   
+        import onnx
         cudnn.benchmark = False
         cudnn.deterministic = config.CUDNN.DETERMINISTIC
         cudnn.enabled = False
@@ -267,12 +278,24 @@ def main():
             
             model.eval()
 
+            # for param in two_inputs_model.parameters():
+            #     print(param.data)
+            # exit(-1)
+
             if EXPORT_ONNX:
                 if not onnx_created:
+                    # two_inputs_model.eval()
                     _save_onnx_model(two_inputs_model, image, qtable, "CATNET_DCT_only.onnx")
                     onnx_created = True
                 logger.info("... Loading ONNX model")
-                onnx_model = onnx.load("CATNET_DCT_only.onnx")
+                # onnx_model = onnx.load("CATNET_DCT_only.onnx")
+
+                ## print onnx model weights
+                # weights = onnx_model.graph.initializer
+                # import onnx.numpy_helper as nh
+                # np.set_printoptions(threshold=sys.maxsize)
+                # print(nh.to_array(weights[0]))
+                # exit(-1)
 
                 # print(onnx_model.graph.input[0].type.tensor_type.shape.dim)
                 # onnx.checker.check_model(onnx_model)
@@ -293,6 +316,10 @@ def main():
                 im_h = cv2.hconcat([pred, pred_onnx])
                 filename_pred = os.path.splitext(get_next_filename(index))[0] + "_comparemodels.png"
                 cv2.imwrite(str(dataset_paths['SAVE_PRED'] / filename_pred), im_h*255.0)
+                
+                filename_pred = os.path.splitext(get_next_filename(index))[0] + "_difmodels.png"
+                cv2.imwrite(str(dataset_paths['SAVE_PRED'] / filename_pred), (np.abs(pred-pred_onnx))*255.0)
+
 
             if SAVE_MAPS:
                 if EXPORT_ONNX and COMPARE_ONNX_PTH:
