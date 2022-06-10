@@ -1,0 +1,76 @@
+/media/VA/BM_tmp/databases/Park/single/S_328386_1084.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_106465_380.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_553342_593.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_488187_228.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_238329_651.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_036945_81.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_208877_143.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_485765_809.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_551846_592.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_150946_921.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_202123_523.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_194518_292.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_437856_678.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_048805_456.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_471193_282.jpg,0
+/media/VA/BM_tmp/databases/Park/single/S_377892_927.jpg,0
+/media/VA/BM_tmp/databases/Park/double/D_312683_121_137.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_482906_1044_894.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_354823_214_1108.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_388224_506_220.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_177482_755_718.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_291792_1158_686.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_070503_234_579.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_436249_1134_977.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_131368_231_1070.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_067443_1116_821.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_391015_315_544.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_385175_161_805.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_479011_232_886.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_552033_503_735.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_519935_512_928.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_329159_569_1161.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_093714_731_415.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_438707_1089_1143.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_127985_567_733.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_019403_196_324.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_172558_406_652.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_078007_758_584.jpg,1
+/media/VA/BM_tmp/databases/Park/double/D_409068_315_840.jpg,1
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000016.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000057.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000251.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000329.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000447.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000461.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000535.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000549.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000570.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/0_COCO_test2014_000000000890.jpg, 0
+/media/BM/databases/DEFACTO-12K/images/1_11_000000268058.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000322029.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000341132.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000345400.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000429706.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000432607.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000434900.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000489088.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000513319.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/1_11_000000552563.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5207_000000146672.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5211_000000295116.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5218_000000259426.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5232_000000271934.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5233_000000466273.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5254_000000125886.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5257_000000041322.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_526_000000348087.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5302_000000086845.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5304_000000261906.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5329_000000217156.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5336_000000134213.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5355_000000034126.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5359_000000014412.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5372_000000261783.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5375_000000348234.jpg, 1
+/media/BM/databases/DEFACTO-12K/images/2_5384_000000385535.jpg, 1

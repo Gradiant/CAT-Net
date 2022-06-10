@@ -13,6 +13,7 @@ from Splicing.data.dataset_FantasticReality import FantasticReality
 from Splicing.data.dataset_IMD2020 import IMD2020
 from Splicing.data.dataset_CASIA import CASIA
 from Splicing.data.dataset_COCOannot import COCOannot
+from Splicing.data.dataset_Park import Park
 # from Splicing.data.dataset_DEFACTO import DEFACTO
 # from Splicing.data.dataset_tampCOCO import tampCOCO
 # from Splicing.data.dataset_NC16 import NC16
@@ -40,7 +41,8 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_train_list.txt"))
             # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_train.txt"))
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto12k.txt"))
-            self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
+            # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
+            self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_train.txt"))
 
         elif mode == "valid":
             # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_valid_list.txt"))
@@ -54,14 +56,15 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_valid_list.txt"))
             # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_valid.txt"))
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto150.txt"))
-            self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
+            self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
 
         elif mode == "arbitrary":
-            self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
+            #self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/genuine//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/copymove//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION//*", read_from_jpeg=read_from_jpeg))
-        else:
+            self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test_inference.txt"))
+        else:   
             raise KeyError("Invalid mode: " + mode)
         if class_weight is None:
             self.class_weights = torch.FloatTensor([1.0, 1.0])

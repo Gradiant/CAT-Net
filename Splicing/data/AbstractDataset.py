@@ -113,6 +113,12 @@ class AbstractDataset(ABC):
         if mask is None:
             mask = np.zeros((h, w))
 
+        if isinstance(mask, int):
+            if mask == 0:
+                mask = np.zeros((h, w))
+            else:
+                mask = np.ones((h, w))
+
         if self._crop_size is None and self._grid_crop:
             crop_size = (-(-h//8) * 8, -(-w//8) * 8)  # smallest 8x8 grid crop that contains image
         elif self._crop_size is None and not self._grid_crop:
@@ -155,7 +161,7 @@ class AbstractDataset(ABC):
 
             # crop mask
             mask = mask[s_r:s_r + crop_size[0], s_c:s_c + crop_size[1]]
-
+            
             # crop DCT_coef
             if 'DCTcoef' in self._blocks or 'DCTvol' in self._blocks or 'rawRGB' in self._blocks:
                 for i in range(self.DCT_channels):
@@ -193,7 +199,7 @@ class AbstractDataset(ABC):
 
         # final tensor
         tensor = torch.cat(img_block)
-
+        
         if 'qtable' not in self._blocks:
             return tensor, torch.tensor(mask, dtype=torch.long), 0
         else:
