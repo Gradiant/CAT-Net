@@ -68,6 +68,73 @@ def parse_args():
 
     return args
 
+def _skip_image(label, th):
+    logger.info(" *** Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
+    mb_size = label.size()[1]*label.size()[2]/1000000
+    if mb_size > th:
+        return True
+    else:
+        return False
+
+def _save_onnx_model(model, image, qtable, filename):
+    logger.info("... Saving ONNX model")
+    dynamic_axes = {'image':{0:'batch_size' , 2:'width', 3:'height'}, 'qtable':{0:'batch_size' , 2:'width', 3:'height'}}
+    torch.onnx.export(model, (image, qtable) , filename, opset_version = 14,  input_names = ['image','qtable'], dynamic_axes=dynamic_axes)
+
+def _check_inputs_names(onnx_model):
+    inputs = {}
+    for inp in onnx_model.graph.input:
+        shape = str(inp.type.tensor_type.shape.dim)
+        inputs[inp.name] = [int(s) for s in shape.split() if s.isdigit()]
+    print(inputs)
+
+def _binarize_prediction(pred, treshold=0.5):
+    # CUSTOM THRESHOLD
+    pred_bin = np.array(pred)
+    pred_bin[pred > treshold] = 1
+    pred_bin[pred <= treshold] = 0
+    return pred_bin
+
+
+def _onnx_inference(image, qtable, filename_onnx):
+    import onnxruntime as ort
+    providers = ['CPUExecutionProvider']
+    ort_sess = ort.InferenceSession(filename_onnx, providers=providers)
+    inputs_onnx = {'image': image.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
+    outputs = ort_sess.run(None, inputs_onnx)
+    pred_s = np.squeeze(outputs)
+    pred = (softmax(pred_s.T).T)[1]
+    # https://onnxruntime.ai/docs/get-started/with-python.html
+    return pred
+
+def _store_maps(filename, pred):
+    # filename
+    base_name = os.path.splitext(filename)[0]
+    base_path = dataset_paths['SAVE_PRED'] / base_name
+    filepath_pred =  str(base_path) + "_pred.png"
+    filepath = str(base_path) + ".png"      
+    logger.info(f"... Saving prediction in {filepath_pred}")
+    cv2.imwrite(str(filepath_pred), pred*255.0)
+
+    #plot2
+    try:    
+        img = cv2.imread( dataset_paths['LOAD_FOLDER']+filename, 1)
+        if len(np.shape(img))>2:
+            gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        else:
+            gray_img = img
+            color_img = cv2.cvtColor(img, cv2.CV_GRAY2RGB)
+            img = color_img
+        h, w = np.shape(pred)
+
+        heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
+        img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
+        fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
+        fin_resized = cv2.resize(fin, (w*6,h*6), interpolation = cv2.INTER_CUBIC)
+                    
+        cv2.imwrite(str(filepath), fin_resized)
+    except:
+        logger.info(f"Error occurred while saving output superimpose. ({filename})")
 
 def main():
     # args = parse_args()
@@ -92,8 +159,7 @@ def main():
 
     # cudnn related setting
     if EXPORT_ONNX:
-        import onnx
-        import onnxruntime as ort   
+        import onnx   
         cudnn.benchmark = False
         cudnn.deterministic = config.CUDNN.DETERMINISTIC
         cudnn.enabled = False
@@ -189,11 +255,8 @@ def main():
             if 'mask' in get_next_filename(index):
                 print("skip mask")
                 continue
-            logger.info(" *** Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
-            logger.info(" *** Shape of input {}".format(image.size()))
-
-            mb_size = label.size()[1]*label.size()[2]/1000000
-            if mb_size > 8.8:
+            
+            if _skip_image(label, 8.8):
                 logger.info(" *** Skip image, too big image!")
                 continue
             
@@ -206,29 +269,16 @@ def main():
 
             if EXPORT_ONNX:
                 if not onnx_created:
-                    logger.info("... Saving ONNX model")
-                    dynamic_axes = {'image':{0:'batch_size' , 2:'width', 3:'height'}, 'qtable':{0:'batch_size' , 2:'width', 3:'height'}}
-                    torch.onnx.export(two_inputs_model, (image, qtable) , "CATNET_DCT_only.onnx", opset_version = 14,  input_names = ['image','qtable'], dynamic_axes=dynamic_axes)
+                    _save_onnx_model(two_inputs_model, image, qtable, "CATNET_DCT_only.onnx")
                     onnx_created = True
                 logger.info("... Loading ONNX model")
                 onnx_model = onnx.load("CATNET_DCT_only.onnx")
-                print(onnx_model.graph.input[0].type.tensor_type.shape.dim)
+
+                # print(onnx_model.graph.input[0].type.tensor_type.shape.dim)
                 # onnx.checker.check_model(onnx_model)
+                # _check_inputs_names(onnx_model)
 
-                inputs = {}
-                for inp in onnx_model.graph.input:
-                    shape = str(inp.type.tensor_type.shape.dim)
-                    inputs[inp.name] = [int(s) for s in shape.split() if s.isdigit()]
-
-                providers = [
-                    'CPUExecutionProvider',
-                ]
-                ort_sess = ort.InferenceSession('CATNET_DCT_only.onnx',providers=providers)
-                inputs_onnx = {'image': image.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
-                outputs = ort_sess.run(None, inputs_onnx)
-                pred_s = np.squeeze(outputs)
-                pred = (softmax(pred_s.T).T)[1]
-                # https://onnxruntime.ai/docs/get-started/with-python.html
+                pred = _onnx_inference(image, qtable, 'CATNET_DCT_only.onnx')
 
                 if COMPARE_ONNX_PTH:
                     pred_onnx = pred
@@ -247,18 +297,8 @@ def main():
             if SAVE_MAPS:
                 if EXPORT_ONNX and COMPARE_ONNX_PTH:
                     pred = pred_onnx
-                # CUSTOM THRESHOLD
-                # pred = F.upsample(input=pred, size=(size[-2], size[-1]), mode='bilinear')
-                # output_logits = pred.cpu().numpy().transpose(0, 2, 3, 1)
-                # exp_array = np.exp(output_logits)
-                # output =  exp_array / (1+ exp_array)
-                # _,w, h, _ = np.shape(output)
-
-                TH_BIN = 0.5
-                pred_bin = np.array(pred)
-                pred_bin[pred > TH_BIN] = 1
-                pred_bin[pred <= TH_BIN] = 0
-                #########################
+                
+                pred_bin = _binarize_prediction(pred, treshold=0.5)
 
                 width_im, heigh_im = np.shape(pred)
                 logger.info("% mod {:.2f}% and max value {}".format(100*pred_bin.sum()/(width_im*heigh_im), pred.max()))
@@ -266,35 +306,7 @@ def main():
                 if SAVE_CSV_RESULTS:
                     outputfile.write("{},{},{}\n".format(get_next_filename(index), pred.sum()/(width_im*heigh_im), pred.max()))
 
-                # filename
-                filename = os.path.splitext(get_next_filename(index))[0] + ".png"
-                filename_pred = os.path.splitext(get_next_filename(index))[0] + "_pred.png"
-
-                filepath_pred = dataset_paths['SAVE_PRED'] / filename_pred
-                filepath = dataset_paths['SAVE_PRED'] / filename
-                
-                print(f"... Saving prediction in {filepath_pred}")
-                cv2.imwrite(str(filepath_pred), pred*255.0)
-                #plot2
-                try:
-                    
-                    img = cv2.imread( dataset_paths['LOAD_FOLDER']+get_next_filename(index), 1)
-                    if len(np.shape(img))>2:
-                        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    else:
-                        gray_img = img
-                        color_img = cv2.cvtColor(img, cv2.CV_GRAY2RGB)
-                        img = color_img
-                    h, w = np.shape(pred)
-
-                    heatmap_img = cv2.applyColorMap(np.uint8(pred*255.0), cv2.COLORMAP_JET)
-                    img_resized = cv2.resize(img, (w,h), interpolation = cv2.INTER_CUBIC)
-                    fin = cv2.addWeighted(heatmap_img, 0.5, img_resized, 0.5, 0)
-                    fin_resized = cv2.resize(fin, (w*6,h*6), interpolation = cv2.INTER_CUBIC)
-                    
-                    cv2.imwrite(str(filepath), fin_resized)
-                except:
-                    logger.info(f"Error occurred while saving output superimpose. ({get_next_filename(index)})")
+                _store_maps(get_next_filename(index),  pred)               
 
             torch.cuda.empty_cache()
 
