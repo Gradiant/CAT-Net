@@ -42,14 +42,10 @@ import matplotlib.pyplot as plt
 import os, sys
 from loguru import logger
 
-
 def softmax(x):
-    
-    max = np.max(x,axis=1,keepdims=True) #returns max of each row and keeps same dims
-    e_x = np.exp(x - max) #subtracts each row with its max value
-    sum = np.sum(e_x,axis=1,keepdims=True) #returns sum of each row and keeps same dims
-    f_x = e_x / sum 
-    return f_x
+    """Compute softmax values for each sets of scores in x."""
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0) 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -102,19 +98,8 @@ def _onnx_inference(image, qtable, filename_onnx):
     ort_sess = ort.InferenceSession(filename_onnx, providers=providers)
     inputs_onnx = {'image': image.cpu().detach().numpy(),'qtable':qtable.cpu().detach().numpy()}
     outputs = ort_sess.run(None, inputs_onnx)
-
-    torch_output = torch.from_numpy(np.array(outputs))
-    print(torch_output.size())
-    pred = torch.squeeze(torch_output, 0)
-    print(pred.size())
-    pred = torch.squeeze(pred, 0)
-    print(pred.size())
-    pred = F.softmax(pred, dim=0)[1]
-    print(pred.size())
-    pred = pred.cpu().numpy()
-
-    # pred_s = np.squeeze(outputs)
-    # pred = (softmax(pred_s.T).T)[1]
+    pred_s = np.squeeze(outputs)
+    pred = (softmax(pred_s))[1]
     # https://onnxruntime.ai/docs/get-started/with-python.html
     return pred
 
