@@ -198,3 +198,26 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
     #     writer_dict['valid_global_steps'] = global_steps + 1
     return print_loss, mean_IoU, avg_mIoU.average(), avg_p_mIoU.average(), IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_result, prec_result, recall_result
 
+def validate_cls(config, testloader, model, writer_dict, valid_set="valid"):
+    
+    model.eval()
+    valid_loss = 0.0
+    valid_acc = 0.0
+
+
+    with torch.no_grad():
+        for batch_idx, (image, label, qtable) in enumerate(tqdm(testloader)):
+            
+            image, label = image.cuda(), label.long().cuda()
+            
+            loss, output = model(image, label, qtable)
+            valid_loss = valid_loss + ((1 / (batch_idx + 1)) * (loss.data.item() - valid_loss))
+            # convert output probabilities to predicted class
+            _, pred = torch.max(output, 1)
+            print('label: ',label)
+            print('output: ',output)
+            print('pred: ',pred)
+           
+           
+
+    return valid_loss, valid_acc

@@ -23,7 +23,8 @@ dataset_paths = {
     'COCOannot_images_val': dataset_root / "DEFACTO-12K/images/",
     'COCOannot_masks_val': "results/data/transform/coco_to_mmsegmentation-defacto/masks/val/",
     'COCOannot_list': "results/data/transform/coco_to_mmsegmentation-defacto/",
-
+    'Park': "/media/VA/BM_tmp/databases/Park/",
+    
     # 'compRAISE': dataset_root / "compRAISE",
     # 'COVERAGE': dataset_root / "COVERAGE",
     # 'CoMoFoD': dataset_root / "CoMoFoD_small_v2",

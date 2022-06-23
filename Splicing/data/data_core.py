@@ -23,7 +23,7 @@ from Splicing.data.dataset_COCOannot import COCOannot
 # from Splicing.data.dataset_CoMoFoD import CoMoFoD
 # from Splicing.data.dataset_GRIP import GRIP
 from Splicing.data.dataset_arbitrary import arbitrary
-
+from Splicing.data.dataset_Park import Park
 
 class SplicingDataset(Dataset):
     def __init__(self, crop_size, grid_crop, blocks=('RGB',), mode="train", DCT_channels=3, read_from_jpeg=False, class_weight=None):
@@ -40,7 +40,8 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_train_list.txt"))
             # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_train.txt"))
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto12k.txt"))
-            self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
+            # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
+            self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_train.txt"))
 
         elif mode == "valid":
             # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_valid_list.txt"))
@@ -54,7 +55,8 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_valid_list.txt"))
             # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_valid.txt"))
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto150.txt"))
-            self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
+            # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
+            self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
 
         elif mode == "arbitrary":
             self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
