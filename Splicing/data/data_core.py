@@ -59,10 +59,11 @@ class SplicingDataset(Dataset):
             self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
 
         elif mode == "arbitrary":
-            self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
+            #self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/genuine//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/copymove//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION//*", read_from_jpeg=read_from_jpeg))
+            self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test_reduce.txt"))
         else:
             raise KeyError("Invalid mode: " + mode)
         if class_weight is None:
@@ -74,7 +75,7 @@ class SplicingDataset(Dataset):
         self.blocks = blocks
         self.mode = mode
         self.read_from_jpeg = read_from_jpeg
-        self.smallest = 1869  # smallest dataset size (IMD:1869)
+        self.smallest = 1033266  # smallest dataset size (IMD:1869)
 
     def shuffle(self):
         for dataset in self.dataset_list:

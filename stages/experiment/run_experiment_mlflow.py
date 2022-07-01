@@ -7,7 +7,8 @@ path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../..')
 if path not in sys.path:
     sys.path.insert(0, path)
 print(path)
-from tools.train import train_model
+# from tools.train import train_model
+from tools.train_DCT_cls import train_model
 
 from os import path as osp
 from typing import List, Union

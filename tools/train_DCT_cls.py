@@ -88,12 +88,13 @@ def train_model():
     # prepare data
     crop_size = (config.TRAIN.IMAGE_SIZE[1], config.TRAIN.IMAGE_SIZE[0])
     if config.DATASET.DATASET == 'splicing_dataset':
-        train_dataset = splicing_dataset(crop_size=crop_size, grid_crop=True, blocks=('DCTvol', 'qtable'), mode='train', DCT_channels=1, read_from_jpeg=True, class_weight=[0.5, 2.5])  # only DCT stream
+        train_dataset = splicing_dataset(crop_size=crop_size, grid_crop=True, blocks=('DCTvol', 'qtable'), mode='train', DCT_channels=1, read_from_jpeg=True, class_weight=[0.5, 2.5])  # [0.5, 2.5] only DCT stream
         logger.info(train_dataset.get_info())
     else:
         raise ValueError("Not supported dataset type.")
 
     print(" ***=> DATALOADER train")
+    
     trainloader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*1,#1 instead of len(gpus)
@@ -139,20 +140,20 @@ def train_model():
     valid_acc = 0
     best_acc = 0
     last_epoch = 0
-    if config.TRAIN.RESUME:
-        model_state_file = os.path.join(final_output_dir,
-                                        'checkpoint.pth.tar')
-        if os.path.isfile(model_state_file):
-            checkpoint = torch.load(model_state_file,
-                                    map_location=lambda storage, loc: storage)
-            #best_p_mIoU = checkpoint['best_p_mIoU']
-            last_epoch = checkpoint['epoch']
-            model.model.module.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            logger.info("=> loaded checkpoint (epoch {})"
-                        .format(checkpoint['epoch']))
-        else:
-            logger.info("No previous checkpoint.")
+    # if config.TRAIN.RESUME:
+    #     model_state_file = os.path.join(final_output_dir,
+    #                                     'checkpoint.pth.tar')
+    #     if os.path.isfile(model_state_file):
+    #         checkpoint = torch.load(model_state_file,
+    #                                 map_location=lambda storage, loc: storage)
+    #         #best_p_mIoU = checkpoint['best_p_mIoU']
+    #         last_epoch = checkpoint['epoch']
+    #         model.model.module.load_state_dict(checkpoint['state_dict'])
+    #         optimizer.load_state_dict(checkpoint['optimizer'])
+    #         logger.info("=> loaded checkpoint (epoch {})"
+    #                     .format(checkpoint['epoch']))
+    #     else:
+    #         logger.info("No previous checkpoint.")
 
     start = timeit.default_timer()
     end_epoch = config.TRAIN.END_EPOCH + config.TRAIN.EXTRA_EPOCH
@@ -171,39 +172,33 @@ def train_model():
         time.sleep(3.0)
 
         # Valid
-        #if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
-        if epoch % 2 == 0:
-            # writer_dict['valid_global_steps'] = epoch
-            
-            valid_loss, valid_acc = validate_cls(config, validloader, model, writer_dict, "valid")
+        valid_loss, valid_acc = validate_cls(config, validloader, model, writer_dict, "valid")
 
-            torch.cuda.empty_cache()
-            gc.collect()
-            time.sleep(3.0)
+        torch.cuda.empty_cache()
+        gc.collect()
+        time.sleep(3.0)
 
-            if valid_acc > best_acc:
-                best_acc = valid_acc
-                torch.save({
-                    'epoch': epoch + 1,
-                    'best_acc': best_acc,
-                    'state_dict': model.model.module.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                }, os.path.join(final_output_dir, 'best.pth.tar'))
-                logger.info("best.pth.tar updated.")
+        if valid_acc > best_acc:
+            best_acc = valid_acc
+            torch.save({
+                'epoch': epoch + 1,
+                'best_acc': best_acc,
+                'state_dict': model.model.module.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            }, os.path.join(final_output_dir, 'best.pth.tar'))
+            logger.info("best.pth.tar updated.")
 
-            msg = '(Valid) Loss: {:.3f}, Val Acc: {: 4.4f}'.format(valid_loss, valid_acc)
+        msg = '(Valid) Loss: {:.3f}, Val Acc: {: 4.4f}'.format(valid_loss, valid_acc)
 
-            metrics={
+        metrics={
                 "valid_loss": valid_loss,
                 "valid_acc": valid_acc
-            }
+        }
 
-            mlflow.log_metrics(metrics)
+        mlflow.log_metrics(metrics)
 
-            logging.info(msg)
+        logging.info(msg)
 
-        else:
-            logging.info("Skip validation.")
 
         logger.info('=> saving checkpoint to {}'.format(
             os.path.join(final_output_dir, 'checkpoint.pth.tar')))
