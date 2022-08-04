@@ -5,7 +5,7 @@ CUDNN:
 GPUS: (2,)
 OUTPUT_DIR: 'output'
 LOG_DIR: 'log'
-WORKERS: 1
+WORKERS: 0
 PRINT_FREQ: 1
 
 DATASET:
@@ -14,8 +14,7 @@ DATASET:
 MODEL:
   NAME: network_DCT
   PRETRAINED_RGB: 'pretrained_models/hrnetv2_w48_imagenet_pretrained.pth'
-  PRETRAINED_DCT: 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar'
-  # PRETRAINED_DCT: 'pretrained_models/DCT_djpeg.pth.tar'
+  PRETRAINED_DCT: 'output/splicing_dataset/CAT_DCT_only_cls/best_CAT_DCT_CLS_lr10e4_DOCIMANv1_bs16.pth.tar'
   EXTRA:
     FINAL_CONV_KERNEL: 1
     STAGE1:
@@ -114,10 +113,10 @@ TRAIN:
   - 512
   - 512
   BASE_SIZE: 512
-  BATCH_SIZE_PER_GPU: 11
+  BATCH_SIZE_PER_GPU: 8
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 200
+  END_EPOCH: 30
   RESUME: true
   OPTIMIZER: sgd
   LR: 0.005

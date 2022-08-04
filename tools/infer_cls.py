@@ -60,7 +60,7 @@ def parse_args():
 
 
 def main():
-    args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only_cls/best_CAT_DCT_CLS_lr10e4_Park_bs16.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only_cls/best_CAT_DCT_CLS_lr10e4_DOCIMANv1_bs16.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
     # cudnn related setting
@@ -71,7 +71,6 @@ def main():
     test_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), DCT_channels=1, mode='arbitrary', read_from_jpeg=True)  # DCT stream
 
     print(test_dataset.get_info())
-    print(len(test_dataset))
     testloader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=1,  # must be 1 to handle arbitrary input sizes
@@ -119,10 +118,15 @@ def main():
     outputfile.write("filename,sum,max\n")
 
     len_testset = 0
+    len_single = 0
+    len_double = 0
     valid_acc = 0
     correct = 0
-    list_tensors = []
-    list_labels = []
+    correct_single = 0
+    correct_double = 0
+    single_acc = 0
+    double_acc = 0
+    list_data = []
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
 
@@ -131,30 +135,47 @@ def main():
             model.eval()
             _, output = model(image, label, qtable)
 
-            list_tensors.append(output)
-            list_labels.append(label)
-
             filename = os.path.splitext(get_next_filename(index))[0] + ".png"
-            _, pred = torch.max(output, 1)
+            _, pred1 = torch.max(output, 1)
+            pred = torch.squeeze(output, 0)
+            pred = F.softmax(pred, dim=0)[1]
+            pred = pred.cpu().numpy()
 
-            if int(pred) == int(label):
+            if int(pred1) == int(label):
                 correct += 1
+                if int(label) == 0:
+                    correct_single += 1
+                else:
+                    correct_double += 1
             len_testset = index + 1
+            if int(label) == 0:
+                len_single += 1
+            if int(label) == 1:
+                len_double += 1
             
             if index % 1 == 0:
-                print(filename, pred, label)
+                print(filename, int(label), int(pred1), pred)
                 print("Accuracy: ",(100 * correct) / (len_testset))
+                if len_single > 0:
+                    print("Accuracy single: ",(100 * correct_single) / (len_single))
+                if len_double > 1:
+                    print("Accuracy double: ",(100 * correct_double) / (len_double))
             
+            list_data.append(','.join((filename, str(int(label)), str(pred))))
 
             del image
             del label
             torch.cuda.empty_cache()
 
+    with open("/media/data/workspace/rroman/CAT-Net/data.txt", "w") as f:
+        f.write('\n'.join(list_data)+'\n')
 
-    torch.save(list_tensors, "/media/data/workspace/rroman/CAT-Net/list_tensors.pt") 
-    torch.save(list_labels, "/media/data/workspace/rroman/CAT-Net/list_labels.pt")
     valid_acc = 100 * correct / len_testset
+    single_acc = 100 * correct_single / len_single
+    double_acc = 100 * correct_double / len_double
     print("Test accuracy:", valid_acc)
+    print("Single accuracy:", single_acc)
+    print("Double accuracy:", double_acc)
     outputfile.close()
 
 if __name__ == '__main__':

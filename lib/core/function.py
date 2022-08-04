@@ -74,9 +74,6 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
         model.zero_grad()
         loss.backward()
         optimizer.step()
-        _, pred = torch.max(output, 1)
-        if i_iter % 100 == 0:
-            print(output, pred, labels)
 
         # measure elapsed time
         batch_time.update(time.time() - tic)
