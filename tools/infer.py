@@ -69,6 +69,8 @@ def infer():
     ## CHOOSE ##
     FULL_OPT = False
     show_mlflow = False
+    save_metrics = True
+    metrics_path = "./data.txt"
     ##working option
     # if FULL_OPT:
     #     args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
@@ -216,7 +218,7 @@ def infer():
             qf1 = get_next_filename(index).split("_")[-2]
             qf2 = get_next_filename(index).split("_")[-1].split(".")[0]
             print(get_next_filename(index), qf1, qf2)
-            list_data.append(','.join((get_next_filename(index), qf1, qf2, str(mean_IoU), str(p_mIoU), str(p_AP), str(p_f1))))
+            list_data.append(','.join((get_next_filename(index), qf1, qf2, str(mean_IoU), str(p_mIoU), str(p_AP), str(p_f1), str(pred1.max()) )))
 
             # filename
             filename = os.path.splitext(get_next_filename(index))[0] + ".png"
@@ -245,8 +247,9 @@ def infer():
             except:
                 print(f"Error occurred while saving output. ({get_next_filename(index)})")
     
-    with open("/media/data/workspace/rroman/CAT-Net/data.txt", "w") as f:
-        f.write('\n'.join(list_data)+'\n')
+    if save_metrics:
+        with open(metrics_path, "w") as f:
+            f.write('\n'.join(list_data)+'\n')
 
     results = {'avg_p_acc': avg_p_acc.average(),
                'avg_mIoU': avg_mIoU.average(),
