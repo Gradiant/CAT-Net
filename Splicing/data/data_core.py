@@ -25,6 +25,7 @@ from Splicing.data.dataset_COCOannot import COCOannot
 # from Splicing.data.dataset_CoMoFoD import CoMoFoD
 # from Splicing.data.dataset_GRIP import GRIP
 from Splicing.data.dataset_arbitrary import arbitrary
+from Splicing.data.arbitrary_cls import arbitraryCls
 from Splicing.data.dataset_Park import Park
 
 class SplicingDataset(Dataset):
@@ -65,12 +66,14 @@ class SplicingDataset(Dataset):
             self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_val.txt"))
 
         elif mode == "arbitrary":
-            #self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
+             self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/genuine//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/copymove//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION//*", read_from_jpeg=read_from_jpeg))
-            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_test.txt"))
+            # self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_test.txt"))
             # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
+        elif mode == "arbitraryCls":
+            self.dataset_list.append(arbitraryCls(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
         else:
             raise KeyError("Invalid mode: " + mode)
         if class_weight is None:
