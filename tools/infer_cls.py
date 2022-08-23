@@ -68,7 +68,7 @@ def main():
     cudnn.deterministic = config.CUDNN.DETERMINISTIC
     cudnn.enabled = config.CUDNN.ENABLED
 
-    test_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), DCT_channels=1, mode='arbitrary', read_from_jpeg=True)  # DCT stream
+    test_dataset = splicing_dataset(crop_size=(512,512), grid_crop=True, blocks=('DCTvol', 'qtable'), DCT_channels=1, mode='arbitraryCls', read_from_jpeg=True)  # DCT stream
 
     print(test_dataset.get_info())
     testloader = torch.utils.data.DataLoader(
@@ -141,6 +141,7 @@ def main():
             pred = F.softmax(pred, dim=0)[1]
             pred = pred.cpu().numpy()
 
+            print("CLS pred is {}".format(pred))
             if int(pred1) == int(label):
                 correct += 1
                 if int(label) == 0:
@@ -167,7 +168,7 @@ def main():
             del label
             torch.cuda.empty_cache()
 
-    with open("/media/data/workspace/rroman/CAT-Net/data.txt", "w") as f:
+    with open("data_cls.txt", "w") as f:
         f.write('\n'.join(list_data)+'\n')
 
     valid_acc = 100 * correct / len_testset
