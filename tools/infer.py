@@ -4,6 +4,8 @@
  June 7, 2021
 """
 import sys, os
+
+from sklearn.metrics import average_precision_score
 path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 if path not in sys.path:
     sys.path.insert(0, path)
@@ -32,7 +34,7 @@ from lib.config import update_config
 from lib.core.criterion import CrossEntropy, OhemCrossEntropy
 from lib.core.function import train, validate
 from lib.utils.modelsummary import get_model_summary
-from lib.utils.utils import create_logger, FullModel, get_rank
+from lib.utils.utils import AverageMeter, create_logger, FullModel, get_rank
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
 from pathlib import Path
@@ -41,6 +43,8 @@ import seaborn as sns; sns.set_theme()
 import matplotlib.pyplot as plt
 import os, sys
 from loguru import logger
+import mlflow
+from PIL import Image
 
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
@@ -132,7 +136,7 @@ def _store_maps(filename, pred):
     except:
         logger.info(f"Error occurred while saving output superimpose. ({filename})")
 
-def main():
+def infer():
     # args = parse_args()
     # Instead of using argparse, force these args:
 
@@ -144,12 +148,15 @@ def main():
     SAVE_MAPS = True
     #use cat_2 environment in gea2 to export to ONNX
     onnx_created = False
-
+    show_mlflow = False
+    save_metrics = True
+    metrics_path = "./data.txt"
     ##working option
-    if FULL_OPT:
-        args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
-    else:
-        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    #if FULL_OPT:
+    #    args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    #else:
+    #    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/finetuning_DCT_DOCIMANv1_DOCUMENTS_cm_best.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
 
     update_config(config, args)
 
@@ -176,7 +183,7 @@ def main():
         test_dataset,
         batch_size=1,  # must be 1 to handle arbitrary input sizes
         shuffle=False,  # must be False to get accurate filename
-        num_workers=1,
+        num_workers=0,
         pin_memory=False)
     
     gpus = list(config.GPUS)
@@ -243,7 +250,15 @@ def main():
     if SAVE_CSV_RESULTS:
         outputfile = open("catnetresultscopymove.csv","w")
         outputfile.write("filename,sum,max\n")
-        
+    avg_acc = AverageMeter()
+    avg_p_acc = AverageMeter()
+    avg_mIoU = AverageMeter()
+    avg_p_mIoU = AverageMeter()
+    avg_F1 = AverageMeter()
+    avg_p_F1 = AverageMeter()
+    avg_AP = AverageMeter()
+    avg_p_AP = AverageMeter()
+    list_data = []   
 
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
@@ -252,8 +267,9 @@ def main():
                 print("skip mask")
                 continue
             
-            if _skip_image(label, 8.8):
-                logger.info(" *** Skip image, too big image!")
+            mb_size = label.size()[1]*label.size()[2]/1000000
+            if mb_size > 9:
+                print("Skip image, too big image!")
                 continue
             
             size = label.size()
@@ -326,4 +342,4 @@ def main():
         outputfile.close()
 
 if __name__ == '__main__':
-    main()
+    infer()

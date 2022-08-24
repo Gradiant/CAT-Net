@@ -30,7 +30,7 @@ from lib.utils.utils import is_class_0
 from lib.utils.utils import adjust_learning_rate
 from lib.utils.utils import get_world_size, get_rank
 import progressbar
-
+from PIL import Image
 
 
 def reduce_tensor(inp):
@@ -62,10 +62,11 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
     for i_iter, (images, labels, qtable) in enumerate(trainloader):
 
         # images, labels, _, _ = batch
+        # for i in range(len(np.array(images))):
+        #     Image.fromarray(np.array(images)[i][0].astype(np.uint8)*255).save(f"/media/data/workspace/rroman/CAT-Net/img_{i}_{0}.jpg")
         images = images.cuda()
         labels = labels.long().cuda()
-        losses, _ = model(images, labels, qtable)  # _ : output of the model (see utils.py)
-
+        losses, output = model(images, labels, qtable)  # _ : output of the model (see utils.py)
         loss = losses.mean()
 
         reduced_loss = reduce_tensor(loss)
@@ -198,3 +199,29 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
     #     writer_dict['valid_global_steps'] = global_steps + 1
     return print_loss, mean_IoU, avg_mIoU.average(), avg_p_mIoU.average(), IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_result, prec_result, recall_result
 
+def validate_cls(config, testloader, model, writer_dict, valid_set="valid"):
+    
+    model.eval()
+    valid_loss = 0.0
+    valid_acc = 0.0
+    correct = 0
+    len_trainset = 0
+
+    with torch.no_grad():
+        for batch_idx, (image, label, qtable) in enumerate(tqdm(testloader)):
+            
+            image, label = image.cuda(), label.long().cuda()
+            
+            loss, output = model(image, label, qtable)
+            valid_loss = valid_loss + ((1 / (batch_idx + 1)) * (loss.data.item() - valid_loss))
+            _, pred = torch.max(output, 1)
+            if batch_idx % 50 == 0:
+                print(pred, label)
+            if int(pred) == int(label):
+                correct += 1
+            len_trainset = batch_idx
+    if correct != 0.0:
+        valid_acc = 100 * correct / len_trainset
+           
+
+    return valid_loss, valid_acc

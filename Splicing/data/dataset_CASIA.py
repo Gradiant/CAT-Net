@@ -70,9 +70,9 @@ if __name__ == '__main__':
 
     imlist = []  # format: tamp.ext,mask.png,jpg_converted.jpg (if already .jpg, jpg_converted.jpg is same as tamp.ext)
     # CASIA2
-    tamp_root = root / "CASIA 2.0/Tp"
-    mask_root = root / "CASIA 2 Groundtruth"
-    jpg_root = root / "CASIA 2.0/jpg"
+    tamp_root = root / "images/Tp"
+    mask_root = root / "masks/CASIA2.0_Groundtruth/"
+    jpg_root = root / "images/Tp"
     jpg_root.mkdir(exist_ok=True)
     for file in os.listdir(tamp_root):
         if file in ['Tp_D_NRD_S_B_ani20002_nat20042_02437.tif']:
@@ -84,13 +84,13 @@ if __name__ == '__main__':
             # convert to jpg
             jpg_im = Image.open(tamp_root / file)
             jpg_im.save(jpg_root/(os.path.splitext(file)[0]+".jpg"), quality=100, subsampling=0)
-            imlist.append(','.join([str(Path("CASIA 2.0/Tp") / file),
-                                    str(Path("CASIA 2 Groundtruth") / (os.path.splitext(file)[0] + "_gt.png")),
-                                    str(Path("CASIA 2.0/jpg") / (os.path.splitext(file)[0] + ".jpg"))]))
+            imlist.append(','.join([str(Path("images/Tp") / file),
+                                    str(Path("masks/CASIA2.0_Groundtruth/") / (os.path.splitext(file)[0] + "_gt.png")),
+                                    str(Path("images/Tp") / (os.path.splitext(file)[0] + ".jpg"))]))
         else:
-            imlist.append(','.join([str(Path("CASIA 2.0/Tp") / file),
-                                str(Path("CASIA 2 Groundtruth") / (os.path.splitext(file)[0]+"_gt.png")),
-                                str(Path("CASIA 2.0/Tp") / file)]))
+            imlist.append(','.join([str(Path("images/Tp") / file),
+                                str(Path("masks/CASIA2.0_Groundtruth/") / (os.path.splitext(file)[0]+"_gt.png")),
+                                str(Path("images/Tp") / file)]))
         assert (mask_root/(os.path.splitext(file)[0]+"_gt.png")).is_file()
     print(len(imlist))  # 6042
 
@@ -110,8 +110,8 @@ if __name__ == '__main__':
     print(len(new_imlist))  # 6025
 
     # CASIA2 authentic
-    tamp_root = root / "CASIA 2.0/Au"
-    jpg_root = root / "CASIA 2.0/jpg"
+    tamp_root = root / "images/Au"
+    jpg_root = root / "images/Au"
     jpg_root.mkdir(exist_ok=True)
     for file in os.listdir(tamp_root):
         if not file.lower().endswith(".jpg"):
@@ -121,13 +121,13 @@ if __name__ == '__main__':
             # convert to jpg
             jpg_im = Image.open(tamp_root / file)
             jpg_im.save(jpg_root / (os.path.splitext(file)[0] + ".jpg"), quality=100, subsampling=0)
-            imlist.append(','.join([str(Path("CASIA 2.0/Au") / file),
+            imlist.append(','.join([str(Path("images/Au") / file),
                                     'None',
-                                    str(Path("CASIA 2.0/jpg") / (os.path.splitext(file)[0] + ".jpg"))]))
+                                    str(Path("images/Au") / (os.path.splitext(file)[0] + ".jpg"))]))
         else:
-            imlist.append(','.join([str(Path("CASIA 2.0/Au") / file),
+            imlist.append(','.join([str(Path("images/Au") / file),
                                     'None',
-                                    str(Path("CASIA 2.0/Au") / file)]))
+                                    str(Path("images/Au") / file)]))
     print(len(imlist))  # 6042
 
     with open("CASIA_v2_auth_list.txt", "w") as f:

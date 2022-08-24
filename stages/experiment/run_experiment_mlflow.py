@@ -8,6 +8,8 @@ if path not in sys.path:
     sys.path.insert(0, path)
 print(path)
 from tools.train import train_model
+from tools.infer import infer
+# from tools.train_DCT_cls import train_model
 
 from os import path as osp
 from typing import List, Union
@@ -62,8 +64,8 @@ def run_experiment_mlflow(
         mlflow.log_artifact("results/experiment.json")
 
         logger.info("Start")
-        train_model()
-
+        # train_model()
+        infer()
 
 
 @logger.catch(reraise=True)

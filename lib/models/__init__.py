@@ -11,4 +11,4 @@ from __future__ import print_function
 
 import lib.models.network_CAT
 import lib.models.network_DCT
-
+import lib.models.network_DCT_cls
