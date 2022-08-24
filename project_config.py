@@ -38,7 +38,7 @@ dataset_paths = {
     # 'CoMoFoD': dataset_root / "CoMoFoD_small_v2",
     # 'GRIP': dataset_root / "CMFDdb_grip",
     'SAVE_PRED': project_root / "output_single",
-    'LOAD_FOLDER': '/home/dperez/workspace/customer/'
+    'LOAD_FOLDER': '/home/dperez/workspace/repos/CAT-Net/input/'
 }
 
 
