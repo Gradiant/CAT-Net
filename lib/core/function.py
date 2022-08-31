@@ -179,27 +179,32 @@ def validate_cls(test_dataset, testloader, model):
     valid_loss = 0.0
     valid_acc = 0.0
     correct = 0
-    len_trainset = 0
-    list_data = 0
+    len_valset = 0
+    list_data = []
     with torch.no_grad():
         for batch_idx, (image, label, qtable) in enumerate(tqdm(testloader)):
             
             image, label = image.cuda(), label.long().cuda()
-
+            model.eval()
+            
             filename = get_next_filename(batch_idx, test_dataset)
             
             loss, output = model(image, label, qtable)
             valid_loss = valid_loss + ((1 / (batch_idx + 1)) * (loss.data.item() - valid_loss))
-            _, pred = torch.max(output, 1)
+            _, pred1 = torch.max(output, 1)
+            pred = torch.squeeze(output, 0)
+            pred = F.softmax(pred, dim=0)[1]
+            pred = pred.cpu().numpy()
+
             if batch_idx % 50 == 0:
-                print(pred, label)
-            if int(pred) == int(label):
+                print(pred, int(label))
+            if int(pred1) == int(label):
                 correct += 1
-            len_trainset = batch_idx
+            len_valset = batch_idx
 
             list_data.append(','.join((filename, str(int(label)), str(pred))))
     if correct != 0.0:
-        valid_acc = 100 * correct / len_trainset
+        valid_acc = 100 * correct / len_valset
            
     return valid_loss, valid_acc, list_data
 

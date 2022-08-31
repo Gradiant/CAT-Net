@@ -4,6 +4,7 @@
  June 7, 2021
 """
 import sys, os
+from lib.core.function import get_next_filename
 from stages.experiment.histogram import show_histogram
 
 from stages.experiment.qf_analysis import qf_analysis
@@ -89,18 +90,6 @@ def infer_cls(show_mlflow=False):
     model.model.load_state_dict(checkpoint['state_dict'])
     model = nn.DataParallel(model, device_ids=gpus).cuda()
 
-    def get_next_filename(i):
-        dataset_list = test_dataset.dataset_list
-        it = 0
-        while True:
-            if i >= len(dataset_list[it]):
-                i -= len(dataset_list[it])
-                it += 1
-                continue
-            name = dataset_list[it].get_tamp_name(i)
-            name = os.path.split(name)[-1]
-            return name
-
 
     len_testset = 0
     len_single = 0
@@ -118,7 +107,7 @@ def infer_cls(show_mlflow=False):
             model.eval()
             _, output = model(image, label, qtable)
 
-            filename = os.path.splitext(get_next_filename(index))[0] + ".png"
+            filename = get_next_filename(index, test_dataset)
             _, pred1 = torch.max(output, 1)
             pred = torch.squeeze(output, 0)
             pred = F.softmax(pred, dim=0)[1]
@@ -146,7 +135,6 @@ def infer_cls(show_mlflow=False):
                 if len_double > 1:
                     print("Accuracy double: ",(100 * correct_double) / (len_double))
             
-            list_data.append(','.join((filename, str(int(label)), str(pred))))
             list_data.append(','.join((filename, str(int(label)), str(pred))))
 
             del image

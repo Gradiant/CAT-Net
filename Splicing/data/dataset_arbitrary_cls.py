@@ -33,6 +33,9 @@ class arbitraryCls(AbstractDatasetCls):
         im = Image.open(tamp_path)
         print(im.size)
         label = 0
+        if tamp_path.count("_") == 2:
+            label = 1
+
         if im.format != "JPEG":
             temp_jpg = f"____temp_{index:04d}.jpg"
             Image.open(tamp_path).convert('RGB').save(temp_jpg, quality=100, subsampling=0)

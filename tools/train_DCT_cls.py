@@ -21,6 +21,7 @@ from lib.config import config
 from lib.config import update_config
 from lib.core.function import train, validate_cls
 from lib.utils.utils import create_logger, FullModel
+from lib import models
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
 from stages.experiment.roc_classification import plot_roc_curve
@@ -155,7 +156,7 @@ def train_model():
         gc.collect()
         time.sleep(3.0)
 
-        output_data = "data_"+epoch+".txt"
+        output_data = "data_"+str(epoch)+".txt"
         with open(output_data, "w") as f:
                 f.write('\n'.join(list_data)+'\n')
 
@@ -192,7 +193,7 @@ def train_model():
             'epoch': epoch + 1,
             'state_dict': model.model.module.state_dict(),
             'optimizer': optimizer.state_dict(),
-        }, os.path.join(final_output_dir, 'checkpoint.pth.tar'))
+        }, os.path.join(final_output_dir, 'checkpoint_epoch_'+str(epoch)+'.pth.tar'))
 
 
     

@@ -10,15 +10,15 @@ def qf_analysis(output_folder, list_data, cls_mode=True, epoch=None):
 
     if cls_mode:
         list_single, list_double = [], []
-        for index in range(0,len(tamp_list)):
-            label = int(tamp_list[index][1])
-            pred = 1 if float(tamp_list[index][2]) >= 0.5 else 0
+        for image in tamp_list:
+            label = int(image[1])
+            pred = 1 if float(image[2]) >= 0.5 else 0
             if label == 1:
-                qf1 = int(tamp_list[index][0].split('_')[-3])
-                qf2 = int(tamp_list[index][0].split("_")[-1].split(".")[0])
+                qf1 = int(image[0].split('_')[-3]) # DOCIMAN
+                qf2 = int(image[0].split("_")[-1].split(".")[0]) #DOCIMAN
                 list_double.append((qf1, qf2, label, pred))
             if label == 0:
-                qf1 = int(tamp_list[index][0].split('_')[-1].split(".")[0])
+                qf1 = int(image[0].split('_')[-1].split(".")[0])
                 list_single.append((qf1, label, pred))
 
         

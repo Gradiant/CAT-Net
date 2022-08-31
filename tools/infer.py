@@ -33,7 +33,7 @@ from lib import models
 from lib.config import config
 from lib.config import update_config
 from lib.core.criterion import CrossEntropy, OhemCrossEntropy
-from lib.core.function import train, validate
+from lib.core.function import get_next_filename, train, validate
 from lib.utils.modelsummary import get_model_summary
 from lib.utils.utils import AverageMeter, AverageMeter, create_logger, FullModel, get_rank
 
@@ -133,19 +133,6 @@ def infer():
     model = nn.DataParallel(model, device_ids=gpus).cuda()
     dataset_paths['SAVE_PRED'].mkdir(parents=True, exist_ok=True)
 
-
-    def get_next_filename(i):
-        dataset_list = test_dataset.dataset_list
-        it = 0
-        while True:
-            if i >= len(dataset_list[it]):
-                i -= len(dataset_list[it])
-                it += 1
-                continue
-            name = dataset_list[it].get_tamp_name(i)
-            name = os.path.split(name)[-1]
-            return name
-
     avg_acc = AverageMeter()
     avg_p_acc = AverageMeter()
     avg_mIoU = AverageMeter()
@@ -158,8 +145,9 @@ def infer():
 
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
-            print("load file : {}".format(get_next_filename(index)))
-            if 'mask' in get_next_filename(index):
+            filename = get_next_filename(index, test_dataset)
+            print("load file : {}".format(filename))
+            if 'mask' in filename:
                 print("skip mask")
                 continue
             print("Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
@@ -217,13 +205,13 @@ def infer():
             print("% mod {:.2f}% and max value {}".format(100*pred1.sum()/(width_im*heigh_im), pred1.max()))
             
             print(mean_IoU, p_mIoU, p_AP, p_f1)
-            qf1 = get_next_filename(index).split("_")[-2]
-            qf2 = get_next_filename(index).split("_")[-1].split(".")[0]
-            print(get_next_filename(index), qf1, qf2)
-            list_data.append(','.join((get_next_filename(index), qf1, qf2, str(mean_IoU), str(p_mIoU), str(p_AP), str(p_f1))))
+            qf1 = filename.split("_")[-2]
+            qf2 = filename.split("_")[-1].split(".")[0]
+            print(filename, qf1, qf2)
+            list_data.append(','.join((filename, qf1, qf2, str(mean_IoU), str(p_mIoU), str(p_AP), str(p_f1))))
 
             # filename
-            filename = os.path.splitext(get_next_filename(index))[0] + ".png"
+            filename = os.path.splitext(filename)[0] + ".png"
             if show_mlflow:
                 Path(mlflow.get_artifact_uri()[7:]+"/Predictions/").mkdir(parents=True, exist_ok=True)
                 filepath = mlflow.get_artifact_uri()[7:]+"/Predictions/"+filename
@@ -233,7 +221,6 @@ def infer():
 
             del image
             del label
-            del pred
             del pred
             torch.cuda.empty_cache()
 
@@ -248,7 +235,7 @@ def infer():
                 plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
                 plt.close(fig)
             except:
-                print(f"Error occurred while saving output. ({get_next_filename(index)})")
+                print(f"Error occurred while saving output. ({filename})")
     
     if save_metrics:
         with open(metrics_path, "w") as f:
