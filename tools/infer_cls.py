@@ -64,7 +64,7 @@ def infer_cls(show_mlflow=False):
         test_dataset,
         batch_size=1,  # must be 1 to handle arbitrary input sizes
         shuffle=False,  # must be False to get accurate filename
-        num_workers=1,
+        num_workers=0,
         pin_memory=False)
     
     gpus = list(config.GPUS)
