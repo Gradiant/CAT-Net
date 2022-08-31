@@ -239,11 +239,11 @@ def infer():
 
             # plot
             try:
-                width = pred11.shape[1]  # in pixels
+                width = pred1.shape[1]  # in pixels
                 fig = plt.figure(frameon=False)
                 dpi = 40  # fig.dpi
-                fig.set_size_inches(width / dpi, ((width * pred11.shape[0])/pred11.shape[1]) / dpi)
-                sns.heatmap(pred11, vmin=0, vmax=1, cbar=False, cmap='jet', )
+                fig.set_size_inches(width / dpi, ((width * pred1.shape[0])/pred1.shape[1]) / dpi)
+                sns.heatmap(pred1, vmin=0, vmax=1, cbar=False, cmap='jet', )
                 plt.axis('off')
                 plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
                 plt.close(fig)

@@ -74,7 +74,8 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_test.txt"))
             # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
         elif mode == "arbitraryCls":
-            self.dataset_list.append(arbitraryCls(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
+            # self.dataset_list.append(arbitraryCls(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
+            self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val.txt"))
         else:
             raise KeyError("Invalid mode: " + mode)
         if class_weight is None:
