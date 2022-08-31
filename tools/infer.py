@@ -63,8 +63,6 @@ def parse_args():
 
 
 def infer():
-    # args = parse_args()
-    # Instead of using argparse, force these args:
 
     ## CHOOSE ##
     FULL_OPT = False

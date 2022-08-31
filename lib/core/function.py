@@ -9,17 +9,14 @@ mjkwon2021@gmail.com
 July 14, 2020
 """
 
-import logging
 import os
 import time
 import mlflow
 
 import numpy as np
 from tqdm import tqdm
-import os
 
 import torch
-import torch.nn as nn
 import torch.distributed as dist
 from torch.nn import functional as F
 
@@ -29,8 +26,6 @@ from lib.utils.utils import get_f1_pixel_level
 from lib.utils.utils import is_class_0
 from lib.utils.utils import adjust_learning_rate
 from lib.utils.utils import get_world_size, get_rank
-import progressbar
-from PIL import Image
 
 
 def reduce_tensor(inp):
@@ -61,9 +56,6 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
 
     for i_iter, (images, labels, qtable) in enumerate(trainloader):
 
-        # images, labels, _, _ = batch
-        # for i in range(len(np.array(images))):
-        #     Image.fromarray(np.array(images)[i][0].astype(np.uint8)*255).save(f"/media/data/workspace/rroman/CAT-Net/img_{i}_{0}.jpg")
         images = images.cuda()
         labels = labels.long().cuda()
         losses, output = model(images, labels, qtable)  # _ : output of the model (see utils.py)
@@ -93,20 +85,17 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
                   'lr: {:.6f}, Loss: {:.6f}' .format(
                       epoch, num_epoch, i_iter, epoch_iters, 
                       batch_time.average(), lr, print_loss)
-            # logging.info(msg)
             import sys
             sys.stdout.write('\r'+str(msg))
 
             mlflow.log_metrics({"loss":print_loss, "lr": lr})
             
-            # writer.add_scalar('train_loss', print_loss, global_steps)
             global_steps += 1
             writer_dict['train_global_steps'] = global_steps
 
 
 def validate(config, testloader, model, writer_dict, valid_set="valid"):
     
-    rank = get_rank()
     world_size = get_world_size()
     model.eval()
     ave_loss = AverageMeter()
@@ -117,12 +106,6 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
     f1_array = np.array([])
     precission_array = np.array([])
     recall_array = np.array([])
-    f1_class_0_array = np.array([])
-    f1_class_1_array = np.array([])
-    prec_class_0_array = np.array([])
-    prec_class_1_array = np.array([])
-    rec_class_0_array = np.array([])
-    rec_class_1_array = np.array([])
 
     with torch.no_grad():
         for _, (image, label, qtable) in enumerate(tqdm(testloader)):
@@ -188,29 +171,22 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
     mean_IoU = IoU_array.mean()
     print_loss = ave_loss.average()/world_size
 
-    # if rank == 0:
-    #     writer = writer_dict['writer']
-    #     global_steps = writer_dict['valid_global_steps']
-    #     writer.add_scalar(valid_set+'_loss', print_loss, global_steps)
-    #     writer.add_scalar(valid_set+'_mIoU', mean_IoU, global_steps)
-    #     writer.add_scalar(valid_set+'_avg_mIoU', avg_mIoU.average(), global_steps)
-    #     writer.add_scalar(valid_set+'_avg_p-mIoU', avg_p_mIoU.average(), global_steps)
-    #     writer.add_scalar(valid_set+'_pixel_acc', pixel_acc, global_steps)
-    #     writer_dict['valid_global_steps'] = global_steps + 1
     return print_loss, mean_IoU, avg_mIoU.average(), avg_p_mIoU.average(), IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_result, prec_result, recall_result
 
-def validate_cls(config, testloader, model, writer_dict, valid_set="valid"):
+def validate_cls(test_dataset, testloader, model):
     
     model.eval()
     valid_loss = 0.0
     valid_acc = 0.0
     correct = 0
     len_trainset = 0
-
+    list_data = 0
     with torch.no_grad():
         for batch_idx, (image, label, qtable) in enumerate(tqdm(testloader)):
             
             image, label = image.cuda(), label.long().cuda()
+
+            filename = get_next_filename(batch_idx, test_dataset)
             
             loss, output = model(image, label, qtable)
             valid_loss = valid_loss + ((1 / (batch_idx + 1)) * (loss.data.item() - valid_loss))
@@ -220,8 +196,21 @@ def validate_cls(config, testloader, model, writer_dict, valid_set="valid"):
             if int(pred) == int(label):
                 correct += 1
             len_trainset = batch_idx
+
+            list_data.append(','.join((filename, str(int(label)), str(pred))))
     if correct != 0.0:
         valid_acc = 100 * correct / len_trainset
            
+    return valid_loss, valid_acc, list_data
 
-    return valid_loss, valid_acc
+def get_next_filename(i, test_dataset):
+        dataset_list = test_dataset.dataset_list
+        it = 0
+        while True:
+            if i >= len(dataset_list[it]):
+                i -= len(dataset_list[it])
+                it += 1
+                continue
+            name = dataset_list[it].get_tamp_name(i)
+            name = os.path.split(name)[-1]
+            return name

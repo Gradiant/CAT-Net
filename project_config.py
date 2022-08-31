@@ -25,6 +25,7 @@ dataset_paths = {
     'COCOannot_list': "results/data/transform/coco_to_mmsegmentation-defacto/",
     'Park': "/media/VA/BM_tmp/databases/Park/",
     'DOCIMANv1': dataset_root / "dociman/DOCIMANv1/",
+    'DOCIMANv2': dataset_root / "dociman/DOCIMANv2/",
     'DOCUMENTS': dataset_root / "forgeries_documents/",
     
     # 'compRAISE': dataset_root / "compRAISE",

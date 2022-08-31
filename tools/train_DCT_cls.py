@@ -1,36 +1,29 @@
 import sys, os
+from stages.experiment.histogram import show_histogram
+
+from stages.experiment.qf_analysis import qf_analysis
 path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 if path not in sys.path:
     sys.path.insert(0, path)
 
 import argparse
 import pprint
-import shutil
-
 import logging
 import time
-import timeit
-from pathlib import Path
 import mlflow
 import gc
 import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.optim
-from torch.utils.data.distributed import DistributedSampler
-# from tensorboardX import SummaryWriter
-
-from lib import models
 from lib.config import config
 from lib.config import update_config
-from lib.core.criterion import CrossEntropy, OhemCrossEntropy
 from lib.core.function import train, validate_cls
-from lib.utils.modelsummary import get_model_summary
-from lib.utils.utils import create_logger, FullModel, get_rank
+from lib.utils.utils import create_logger, FullModel
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
+from stages.experiment.roc_classification import plot_roc_curve
 
 
 def parse_args():
@@ -140,25 +133,9 @@ def train_model():
     valid_acc = 0
     best_acc = 0
     last_epoch = 0
-    # if config.TRAIN.RESUME:
-    #     model_state_file = os.path.join(final_output_dir,
-    #                                     'checkpoint.pth.tar')
-    #     if os.path.isfile(model_state_file):
-    #         checkpoint = torch.load(model_state_file,
-    #                                 map_location=lambda storage, loc: storage)
-    #         #best_p_mIoU = checkpoint['best_p_mIoU']
-    #         last_epoch = checkpoint['epoch']
-    #         model.model.module.load_state_dict(checkpoint['state_dict'])
-    #         optimizer.load_state_dict(checkpoint['optimizer'])
-    #         logger.info("=> loaded checkpoint (epoch {})"
-    #                     .format(checkpoint['epoch']))
-    #     else:
-    #         logger.info("No previous checkpoint.")
-
-    start = timeit.default_timer()
+   
     end_epoch = config.TRAIN.END_EPOCH + config.TRAIN.EXTRA_EPOCH
     num_iters = config.TRAIN.END_EPOCH * epoch_iters
-    extra_iters = config.TRAIN.EXTRA_EPOCH * epoch_iters
 
     for epoch in range(last_epoch, end_epoch):
         # train
@@ -172,14 +149,23 @@ def train_model():
         time.sleep(3.0)
 
         # Valid
-        valid_loss, valid_acc = validate_cls(config, validloader, model, writer_dict, "valid")
+        valid_loss, valid_acc, list_data = validate_cls(valid_dataset, validloader, model)
 
         torch.cuda.empty_cache()
         gc.collect()
         time.sleep(3.0)
 
+        output_data = "data_"+epoch+".txt"
+        with open(output_data, "w") as f:
+                f.write('\n'.join(list_data)+'\n')
+
+        qf_analysis(mlflow.get_artifact_uri()[7:], output_data, cls_mode=True, epoch=str(epoch))
+        show_histogram(mlflow.get_artifact_uri()[7:], output_data, str(epoch))
+        plot_roc_curve(mlflow.get_artifact_uri()[7:], output_data, str(epoch))
+
         if valid_acc > best_acc:
             best_acc = valid_acc
+
             torch.save({
                 'epoch': epoch + 1,
                 'best_acc': best_acc,
@@ -209,5 +195,6 @@ def train_model():
         }, os.path.join(final_output_dir, 'checkpoint.pth.tar'))
 
 
+    
 if __name__ == '__main__':
     train_model()

@@ -83,3 +83,6 @@ stages:
       md5: 16cd7552a1b397f0f22c8369c4a5ca80.dir
       size: 115969947
       nfiles: 84417
+  run_experiment_mlflow:
+    cmd: export MLFLOW_TRACKING_URI="http://10.10.30.58:8999/" && export CUDA_VISIBLE_DEVICES="2"
+      && mlflow run . --experiment-name catnet-auth --no-conda

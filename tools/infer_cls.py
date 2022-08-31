@@ -4,42 +4,32 @@
  June 7, 2021
 """
 import sys, os
-from tkinter import Label
+from stages.experiment.histogram import show_histogram
+
+from stages.experiment.qf_analysis import qf_analysis
 path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 if path not in sys.path:
     sys.path.insert(0, path)
 
 import argparse
-import pprint
-import shutil
-
-import logging
-import time
-import timeit
-from pathlib import Path
-
-import numpy as np
 from tqdm import tqdm
+from lib import models
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.nn import functional as F
 
-from lib import models
 from lib.config import config
 from lib.config import update_config
-from lib.core.criterion import CrossEntropy, OhemCrossEntropy
-from lib.core.function import train, validate
-from lib.utils.modelsummary import get_model_summary
-from lib.utils.utils import create_logger, FullModel, get_rank
+from lib.utils.utils import create_logger, FullModel
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
-from pathlib import Path
-from project_config import dataset_paths
+from project_config import project_root
 import seaborn as sns; sns.set_theme()
-import matplotlib.pyplot as plt
 import os
+import mlflow
+from stages.experiment.roc_classification import plot_roc_curve
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Infere classification network')
@@ -59,10 +49,9 @@ def parse_args():
     return args
 
 
-def main():
-    args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only_cls/best_CAT_DCT_CLS_lr10e4_DOCIMANv1_bs16.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+def infer_cls(show_mlflow=False):
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only_cls/checkpoint_epoch1_DOCIMANv2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
-
     # cudnn related setting
     cudnn.benchmark = config.CUDNN.BENCHMARK
     cudnn.deterministic = config.CUDNN.DETERMINISTIC
@@ -99,8 +88,6 @@ def main():
 
     model.model.load_state_dict(checkpoint['state_dict'])
     model = nn.DataParallel(model, device_ids=gpus).cuda()
-    dataset_paths['SAVE_PRED'].mkdir(parents=True, exist_ok=True)
-
 
     def get_next_filename(i):
         dataset_list = test_dataset.dataset_list
@@ -114,19 +101,15 @@ def main():
             name = os.path.split(name)[-1]
             return name
 
-    outputfile = open("catnetresultscopymove.csv","w")
-    outputfile.write("filename,sum,max\n")
 
     len_testset = 0
     len_single = 0
     len_double = 0
-    valid_acc = 0
     correct = 0
     correct_single = 0
     correct_double = 0
-    single_acc = 0
-    double_acc = 0
     list_data = []
+    val_accuracy = 0
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
 
@@ -135,12 +118,11 @@ def main():
             model.eval()
             _, output = model(image, label, qtable)
 
-            filename = os.path.splitext(get_next_filename(index))[0] + ".png"
+            filename = get_next_filename(index)
             _, pred1 = torch.max(output, 1)
             pred = torch.squeeze(output, 0)
             pred = F.softmax(pred, dim=0)[1]
             pred = pred.cpu().numpy()
-
             if int(pred1) == int(label):
                 correct += 1
                 if int(label) == 0:
@@ -154,8 +136,9 @@ def main():
                 len_double += 1
             
             if index % 1 == 0:
+                val_accuracy = (100 * correct) / (len_testset)
                 print(filename, int(label), int(pred1), pred)
-                print("Accuracy: ",(100 * correct) / (len_testset))
+                print("Accuracy: ",val_accuracy)
                 if len_single > 0:
                     print("Accuracy single: ",(100 * correct_single) / (len_single))
                 if len_double > 1:
@@ -167,16 +150,23 @@ def main():
             del label
             torch.cuda.empty_cache()
 
-    with open("/media/data/workspace/rroman/CAT-Net/data.txt", "w") as f:
+    output_data = "data.txt"
+    with open(output_data, "w") as f:
         f.write('\n'.join(list_data)+'\n')
 
-    valid_acc = 100 * correct / len_testset
-    single_acc = 100 * correct_single / len_single
-    double_acc = 100 * correct_double / len_double
-    print("Test accuracy:", valid_acc)
-    print("Single accuracy:", single_acc)
-    print("Double accuracy:", double_acc)
-    outputfile.close()
+    if show_mlflow:
+        output_path = mlflow.get_artifact_uri()[7:]
+        metrics={
+                "valid_acc": val_accuracy
+        }
+        mlflow.log_metrics(metrics)
+    else:
+        output_path = project_root
+
+    qf_analysis(output_path, output_data, cls_mode=True, epoch=None)
+    show_histogram(output_path, output_data, epoch=None)
+    plot_roc_curve(output_path, output_data, epoch=None)
+
 
 if __name__ == '__main__':
-    main()
+    infer_cls()

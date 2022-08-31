@@ -10,3 +10,4 @@ log/
 *.jpg
 output_pred/
 Splicing/data/DOCIMANv1_train.txt
+images/
