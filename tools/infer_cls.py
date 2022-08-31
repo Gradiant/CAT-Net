@@ -166,9 +166,10 @@ def infer_cls(show_mlflow=False):
     else:
         output_path = project_root
 
-    qf_analysis(output_path, output_data, cls_mode=True, epoch=None)
-    show_histogram(output_path, output_data, epoch=None)
-    plot_roc_curve(output_path, output_data, epoch=None)
+    if len(test_dataset) > 1:
+        qf_analysis(output_path, output_data, cls_mode=True, epoch=None)
+        show_histogram(output_path, output_data, epoch=None)
+        plot_roc_curve(output_path, output_data, epoch=None)
 
 
 if __name__ == '__main__':
