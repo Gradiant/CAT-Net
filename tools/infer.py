@@ -6,6 +6,8 @@
 import sys, os
 
 from sklearn.metrics import average_precision_score
+
+from sklearn.metrics import average_precision_score
 path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 if path not in sys.path:
     sys.path.insert(0, path)
@@ -33,7 +35,7 @@ from lib.config import update_config
 from lib.core.criterion import CrossEntropy, OhemCrossEntropy
 from lib.core.function import train, validate
 from lib.utils.modelsummary import get_model_summary
-from lib.utils.utils import AverageMeter, create_logger, FullModel, get_rank
+from lib.utils.utils import AverageMeter, AverageMeter, create_logger, FullModel, get_rank
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
 from pathlib import Path
@@ -41,6 +43,8 @@ from project_config import dataset_paths
 import seaborn as sns; sns.set_theme()
 import matplotlib.pyplot as plt
 import os
+import mlflow
+from PIL import Image
 import mlflow
 from PIL import Image
 
@@ -67,11 +71,13 @@ def infer():
     ## CHOOSE ##
     FULL_OPT = False
     show_mlflow = False
+    save_metrics = True
+    metrics_path = "./data.txt"
     ##working option
-    # if FULL_OPT:
-    #     args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
-    # else:    
-    #     args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    # # if FULL_OPT:
+    # #     args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    # # else:    
+    # #     args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
 
     args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/finetuning_DCT_DOCIMANv1_DOCUMENTS_cm_best.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
@@ -228,23 +234,25 @@ def infer():
             del image
             del label
             del pred
+            del pred
             torch.cuda.empty_cache()
 
             # plot
             try:
-                width = pred1.shape[1]  # in pixels
+                width = pred11.shape[1]  # in pixels
                 fig = plt.figure(frameon=False)
                 dpi = 40  # fig.dpi
-                fig.set_size_inches(width / dpi, ((width * pred1.shape[0])/pred1.shape[1]) / dpi)
-                sns.heatmap(pred1, vmin=0, vmax=1, cbar=False, cmap='jet', )
+                fig.set_size_inches(width / dpi, ((width * pred11.shape[0])/pred11.shape[1]) / dpi)
+                sns.heatmap(pred11, vmin=0, vmax=1, cbar=False, cmap='jet', )
                 plt.axis('off')
                 plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
                 plt.close(fig)
             except:
                 print(f"Error occurred while saving output. ({get_next_filename(index)})")
     
-    with open("/media/data/workspace/rroman/CAT-Net/data.txt", "w") as f:
-        f.write('\n'.join(list_data)+'\n')
+    if save_metrics:
+        with open(metrics_path, "w") as f:
+            f.write('\n'.join(list_data)+'\n')
 
     results = {'avg_p_acc': avg_p_acc.average(),
                'avg_mIoU': avg_mIoU.average(),

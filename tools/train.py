@@ -155,20 +155,20 @@ def train_model():
                          config.TRAIN.BATCH_SIZE_PER_GPU / len(gpus))
     best_p_mIoU = 0
     last_epoch = 0
-    if config.TRAIN.RESUME:
-        model_state_file = os.path.join(final_output_dir,
-                                        'checkpoint.pth.tar')
-        if os.path.isfile(model_state_file):
-            checkpoint = torch.load(model_state_file,
-                                    map_location=lambda storage, loc: storage)
-            best_p_mIoU = checkpoint['best_p_mIoU']
-            last_epoch = checkpoint['epoch']
-            model.model.module.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            logger.info("=> loaded checkpoint (epoch {})"
-                        .format(checkpoint['epoch']))
-        else:
-            logger.info("No previous checkpoint.")
+    # if config.TRAIN.RESUME:
+    #     model_state_file = os.path.join(final_output_dir,
+    #                                     'checkpoint.pth.tar')
+    #     if os.path.isfile(model_state_file):
+    #         checkpoint = torch.load(model_state_file,
+    #                                 map_location=lambda storage, loc: storage)
+    #         best_p_mIoU = checkpoint['best_p_mIoU']
+    #         last_epoch = checkpoint['epoch']
+    #         model.model.module.load_state_dict(checkpoint['state_dict'])
+    #         optimizer.load_state_dict(checkpoint['optimizer'])
+    #         logger.info("=> loaded checkpoint (epoch {})"
+    #                     .format(checkpoint['epoch']))
+    #     else:
+    #         logger.info("No previous checkpoint.")
 
     start = timeit.default_timer()
     end_epoch = config.TRAIN.END_EPOCH + config.TRAIN.EXTRA_EPOCH

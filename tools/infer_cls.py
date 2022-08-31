@@ -118,11 +118,13 @@ def infer_cls(show_mlflow=False):
             model.eval()
             _, output = model(image, label, qtable)
 
-            filename = get_next_filename(index)
+            filename = os.path.splitext(get_next_filename(index))[0] + ".png"
             _, pred1 = torch.max(output, 1)
             pred = torch.squeeze(output, 0)
             pred = F.softmax(pred, dim=0)[1]
             pred = pred.cpu().numpy()
+
+            print("CLS pred is {}".format(pred))
             if int(pred1) == int(label):
                 correct += 1
                 if int(label) == 0:
@@ -144,6 +146,7 @@ def infer_cls(show_mlflow=False):
                 if len_double > 1:
                     print("Accuracy double: ",(100 * correct_double) / (len_double))
             
+            list_data.append(','.join((filename, str(int(label)), str(pred))))
             list_data.append(','.join((filename, str(int(label)), str(pred))))
 
             del image
