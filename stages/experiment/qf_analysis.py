@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def qf_analysis(output_folder, list_data, cls_mode=True, epoch=None):
+def qf_analysis(output_folder, list_data, cls_mode, epoch):
     with open(list_data, "r") as f:
         tamp_list = [t.strip().split(',') for t in f.readlines()]
 
@@ -58,10 +58,21 @@ def qf_analysis(output_folder, list_data, cls_mode=True, epoch=None):
     else:
         df= pd.DataFrame(tamp_list, columns=['img_name', 'qf1', 'qf2', 'mean_IoU', 'p_mIoU', 'p_AP', 'p_f1'], dtype=float)
         df_mean = df.groupby(['qf1', 'qf2'], as_index=False)[["mean_IoU", "p_mIoU", "p_AP", "p_f1"]].mean()
+
+        df_mIoU = df_mean.pivot("qf1", "qf2", "mean_IoU")
+        _, ax = plt.subplots(figsize=(30,25)) 
+        sns.set(font_scale=2.5)
+        graphic_mIoU = sns.heatmap(df_mIoU, cmap="RdYlGn", annot=True, ax=ax, linewidths=0.01, linecolor='gray')
+        graphic_mIoU.set_xticklabels(graphic_mIoU.get_xmajorticklabels(), fontsize = 25)
+        graphic_mIoU.set_yticklabels(graphic_mIoU.get_ymajorticklabels(), fontsize = 25)
+        graphic_mIoU.invert_yaxis()
+
         if epoch is None:
-            df_mean.to_excel("/media/data/workspace/rroman/CAT-Net/qf_segmentation.xlsx")
+            df_mean.to_excel(str(output_folder)+"/qf_segmentation.xlsx")
+            graphic_mIoU.figure.savefig(str(output_folder)+"/qf_heatmap_mIoU.png")
         else:
-            df_mean.to_excel("/media/data/workspace/rroman/CAT-Net/qf_segmentation_"+epoch+".xlsx")
+            df_mean.to_excel(str(output_folder)+"/qf_segmentation_"+epoch+".xlsx")
+            graphic_mIoU.figure.savefig(str(output_folder)+"/qf_heatmap_mIoU"+epoch+".png")
 
 
 

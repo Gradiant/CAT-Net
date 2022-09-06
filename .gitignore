@@ -9,7 +9,5 @@ log/
 *.png
 *.jpg
 output_pred/
-Splicing/data/DOCIMANv1_train.txt
-Splicing/data/DOCIMANv2_train_filtered.txt
-Splicing/data/DOCIMANv2_val_filtered.txt
+Splicing/data/
 images/

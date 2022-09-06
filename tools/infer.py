@@ -6,8 +6,9 @@
 import sys, os
 
 from sklearn.metrics import average_precision_score
+from project_config import project_root
 
-from sklearn.metrics import average_precision_score
+from stages.experiment.qf_analysis import qf_analysis
 path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 if path not in sys.path:
     sys.path.insert(0, path)
@@ -66,20 +67,19 @@ def parse_args():
     return args
 
 
-def infer():
+def infer(show_mlflow):
 
     ## CHOOSE ##
     FULL_OPT = False
-    show_mlflow = False
     save_metrics = True
-    metrics_path = "./data.txt"
+    metrics_path = "./data_segmentation.txt"
     ##working option
     # # if FULL_OPT:
     # #     args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     # # else:    
     # #     args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
 
-    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/finetuning_DCT_DOCIMANv1_DOCUMENTS_cm_best.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/finetuning_DCT_DOCIMANv2_DOCUMENTS_cm_best.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
     # cudnn related setting
@@ -253,7 +253,10 @@ def infer():
 
     if show_mlflow:
         mlflow.log_metrics(results)
+        qf_analysis(mlflow.get_artifact_uri()[7:], metrics_path, cls_mode=False, epoch=None)
+    else:
+        qf_analysis(project_root, metrics_path, cls_mode=False, epoch=None)
     
-
+    
 if __name__ == '__main__':
     infer()

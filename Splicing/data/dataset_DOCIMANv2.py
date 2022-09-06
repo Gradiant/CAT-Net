@@ -49,3 +49,23 @@ if __name__ == '__main__':
         f.write('\n'.join(list_data)+'\n')
     print(len(list_data))
     
+    # Filter qfs so that white crops are discarded
+    list_data, list_white = [], []
+    input_file = "/home/rroman/workspace/CAT-Net/Splicing/data/DOCIMANv2_train.txt"
+    root_path = project_config.dataset_paths['DOCIMANv2']
+    with open(input_file, "r") as f:
+        tamp_list = [t.strip().split(',') for t in f.readlines()]
+
+    for i, image in enumerate(tamp_list):
+        im = np.array(Image.open(str(root_path)+'/'+image[0]).convert('RGB'))
+        if (np.max(im) == np.min(im) != 255):
+            print(image[0], np.max(im), np.min(im))
+        if (np.max(im) != np.min(im)) or (np.max(im) == np.min(im) != 255):
+            list_data.append(','.join((image[0], image[1])))
+        if i % 1000 == 0:
+            print(i)
+    
+    output_file = input_file.split(".")[0]+"_no_white_crops.txt"
+    with open(output_file, "w") as f:
+        f.write('\n'.join(list_data)+'\n')
+    print(len(list_data))

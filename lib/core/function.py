@@ -94,11 +94,11 @@ def train(config, epoch, num_epoch, epoch_iters, base_lr, num_iters,
             writer_dict['train_global_steps'] = global_steps
 
 
-def validate(config, testloader, model, writer_dict, valid_set="valid"):
+def validate(config, testloader, model, test_dataset):
     
     world_size = get_world_size()
     model.eval()
-    ave_loss = AverageMeter()
+    
     confusion_matrix = np.zeros(
         (config.DATASET.NUM_CLASSES, config.DATASET.NUM_CLASSES))
     avg_mIoU = AverageMeter()
@@ -106,12 +106,18 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
     f1_array = np.array([])
     precission_array = np.array([])
     recall_array = np.array([])
-
+    
+    list_data = []
+    ave_loss = AverageMeter()
+    avg_mIoU = AverageMeter()
+    avg_p_mIoU = AverageMeter()
+    
     with torch.no_grad():
-        for _, (image, label, qtable) in enumerate(tqdm(testloader)):
+        for index, (image, label, qtable) in enumerate(tqdm(testloader)):
             size = label.size()
             image = image.cuda()
             label = label.long().cuda()
+            filename = get_next_filename(index, test_dataset)
 
             losses, pred = model(image, label, qtable)
             pred = F.upsample(input=pred, size=(
@@ -153,6 +159,11 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
             TP = current_confusion_matrix[1, 1]
             p_mIoU = 0.5 * (FN / np.maximum(1.0, FN + TP + TN)) + 0.5 * (FP / np.maximum(1.0, FP + TP + TN))
             avg_p_mIoU.update(np.maximum(mean_IoU, p_mIoU))
+            
+
+            qf1 = filename.split("_")[-2]
+            qf2 = filename.split("_")[-1].split(".")[0]
+            list_data.append(','.join((filename, qf1, qf2, str(mean_IoU), str(p_mIoU), str(precission), str(f1_image))))
 
     f1_result = np.average(f1_array)
     prec_result = np.average(precission_array)
@@ -171,7 +182,7 @@ def validate(config, testloader, model, writer_dict, valid_set="valid"):
     mean_IoU = IoU_array.mean()
     print_loss = ave_loss.average()/world_size
 
-    return print_loss, mean_IoU, avg_mIoU.average(), avg_p_mIoU.average(), IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_result, prec_result, recall_result
+    return print_loss, mean_IoU, avg_mIoU.average(), avg_p_mIoU.average(), IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_result, prec_result, recall_result, list_data
 
 def validate_cls(test_dataset, testloader, model):
     

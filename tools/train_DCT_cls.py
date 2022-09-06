@@ -50,6 +50,7 @@ def train_model():
     
     args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', local_rank=0, opts=None)
     update_config(config, args)
+    output_folder = mlflow.get_artifact_uri()[7:]
 
     logger, final_output_dir, tb_log_dir = create_logger(
         config, args.cfg, 'train')
@@ -156,13 +157,13 @@ def train_model():
         gc.collect()
         time.sleep(3.0)
 
-        output_data = "data_"+str(epoch)+".txt"
+        output_data = output_folder+"/data_segmentation_"+str(epoch+1)+".txt"
         with open(output_data, "w") as f:
                 f.write('\n'.join(list_data)+'\n')
 
-        qf_analysis(mlflow.get_artifact_uri()[7:], output_data, cls_mode=True, epoch=str(epoch))
-        show_histogram(mlflow.get_artifact_uri()[7:], output_data, str(epoch))
-        plot_roc_curve(mlflow.get_artifact_uri()[7:], output_data, str(epoch))
+        qf_analysis(output_folder, output_data, cls_mode=True, epoch=str(epoch+1))
+        show_histogram(output_folder, output_data, str(epoch+1))
+        plot_roc_curve(output_folder, output_data, str(epoch+1))
 
         if valid_acc > best_acc:
             best_acc = valid_acc
@@ -193,7 +194,7 @@ def train_model():
             'epoch': epoch + 1,
             'state_dict': model.model.module.state_dict(),
             'optimizer': optimizer.state_dict(),
-        }, os.path.join(final_output_dir, 'checkpoint_epoch_'+str(epoch)+'.pth.tar'))
+        }, os.path.join(final_output_dir, 'checkpoint_epoch_'+str(epoch+1)+'.pth.tar'))
 
 
     

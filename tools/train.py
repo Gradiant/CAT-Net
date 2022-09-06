@@ -10,6 +10,8 @@ July 14, 2020
 """
 
 import sys, os
+
+from stages.experiment.qf_analysis import qf_analysis
 path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 if path not in sys.path:
     sys.path.insert(0, path)
@@ -31,6 +33,7 @@ from lib.config import update_config
 from lib.core.criterion import CrossEntropy, OhemCrossEntropy
 from lib.core.function import train, validate
 from lib.utils.utils import create_logger, FullModel
+from lib import models
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
 
@@ -60,7 +63,7 @@ def train_model():
     ## CHOOSE ##
     # args = argparse.Namespace(cfg='experiments/CAT_full.yaml', local_rank=0, opts=None)
     args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', local_rank=0, opts=None)
-
+    output_folder = mlflow.get_artifact_uri()[7:]
     update_config(config, args)
 
     logger, final_output_dir, tb_log_dir = create_logger(
@@ -188,8 +191,8 @@ def train_model():
 
         # Valid
         if epoch % 1 == 0:
-            valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_avg, prec_avg, recall_avg = \
-                validate(config, validloader, model, writer_dict, "valid")
+            valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_avg, prec_avg, recall_avg, list_data = \
+                validate(config, validloader, model, valid_dataset)
 
             torch.cuda.empty_cache()
             gc.collect()
@@ -246,6 +249,12 @@ def train_model():
             'state_dict': model.model.module.state_dict(),
             'optimizer': optimizer.state_dict(),
         }, os.path.join(final_output_dir, 'checkpoint.pth.tar'))
+
+        output_data = output_folder+"/data_segmentation_"+str(epoch+1)+".txt"
+        with open(output_data, "w") as f:
+                f.write('\n'.join(list_data)+'\n')
+
+        qf_analysis(output_folder, output_data, cls_mode=False, epoch=str(epoch+1))
 
 
 if __name__ == '__main__':

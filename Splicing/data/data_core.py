@@ -46,8 +46,8 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto12k.txt"))
             # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
             # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_train.txt"))
-            self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_train.txt")) 
-            # self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_train_hq.txt"))
+            # self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_train.txt")) 
+            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_train.txt"))
 
         elif mode == "valid":
             # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_valid_list.txt"))
@@ -63,19 +63,19 @@ class SplicingDataset(Dataset):
             # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto150.txt"))
             # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
             # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
-            self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val.txt"))
-            # self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_val_hq.txt"))
+            # self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val.txt"))
+            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_val.txt"))
 
         elif mode == "arbitrary":
-             self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
+            #  self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/genuine//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/copymove//*", read_from_jpeg=read_from_jpeg))
             # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION//*", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_test.txt"))
+            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_test.txt"))
             # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
         elif mode == "arbitraryCls":
             # self.dataset_list.append(arbitraryCls(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
-            self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val.txt"))
+            self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val_filtered_no_white_crops.txt"))
         else:
             raise KeyError("Invalid mode: " + mode)
         if class_weight is None:
@@ -87,7 +87,7 @@ class SplicingDataset(Dataset):
         self.blocks = blocks
         self.mode = mode
         self.read_from_jpeg = read_from_jpeg
-        self.smallest = 1357268 # smallest dataset size (IMD:1869)
+        self.smallest = 122412 # smallest dataset size (IMD:1869)
 
     def shuffle(self):
         for dataset in self.dataset_list:

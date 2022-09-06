@@ -58,8 +58,8 @@ def run_experiment_mlflow():
         mlflow.log_artifact("results/experiment.json")
 
         logger.info("Start")
-        # train_model_cls()
-        infer_cls(show_mlflow=True)
+        train_model()
+        # infer(show_mlflow=True)
 
 
 @logger.catch(reraise=True)
