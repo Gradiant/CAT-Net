@@ -84,5 +84,5 @@ stages:
       size: 115969947
       nfiles: 84417
   run_experiment_mlflow:
-    cmd: export MLFLOW_TRACKING_URI="http://10.10.30.58:8999/" && export CUDA_VISIBLE_DEVICES="2"
+    cmd: export MLFLOW_TRACKING_URI="http://10.5.0.58:8999/" && export CUDA_VISIBLE_DEVICES="1"
       && mlflow run . --experiment-name catnet-auth --no-conda

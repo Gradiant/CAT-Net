@@ -10,72 +10,31 @@ from torch.utils.data import Dataset
 import random
 from Splicing.data.dataset_DOCIMANv1 import DOCIMANv1
 from Splicing.data.dataset_DOCIMANv2 import DOCIMANv2
+from Splicing.data.dataset_DOCIMANv2_combined import DOCIMANv2Combined
 from Splicing.data.dataset_DOCUMENTS import DOCUMENTS
+from Splicing.data.dataset_DOCUMENTS_combined import DOCUMENTS_Combined
 
-from Splicing.data.dataset_FantasticReality import FantasticReality
-from Splicing.data.dataset_IMD2020 import IMD2020
-from Splicing.data.dataset_CASIA import CASIA
-from Splicing.data.dataset_COCOannot import COCOannot
-# from Splicing.data.dataset_DEFACTO import DEFACTO
-# from Splicing.data.dataset_tampCOCO import tampCOCO
-# from Splicing.data.dataset_NC16 import NC16
-# from Splicing.data.dataset_Columbia import Columbia
-# from Splicing.data.dataset_Carvalho import Carvalho
-# from Splicing.data.dataset_compRAISE import compRAISE
-# from Splicing.data.dataset_COVERAGE import COVERAGE
-# from Splicing.data.dataset_CoMoFoD import CoMoFoD
-# from Splicing.data.dataset_GRIP import GRIP
 from Splicing.data.dataset_arbitrary import arbitrary
 from Splicing.data.dataset_arbitrary_cls import arbitraryCls
-from Splicing.data.dataset_Park import Park
-
+from Splicing.data.dataset_arbitrary_combined import arbitraryCombined
 class SplicingDataset(Dataset):
     def __init__(self, crop_size, grid_crop, blocks=('RGB',), mode="train", DCT_channels=3, read_from_jpeg=False, class_weight=None):
         self.dataset_list = []
         if mode == "train":
-            # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_train_list.txt"))
-            # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_auth_train_list.txt", is_auth_list=True))
-            # self.dataset_list.append(IMD2020(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/IMD_train_list.txt", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(CASIA(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/CASIA_v2_train_list.txt", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(CASIA(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/CASIA_v2_auth_train_list.txt", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/cm_COCO_train_list.txt"))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/sp_COCO_train_list.txt"))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcm_COCO_train_list.txt"))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_train_list.txt"))
-            # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_train.txt"))
-            # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto12k.txt"))
-            # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_train.txt", True))
-            # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_train.txt"))
-            # self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_train.txt")) 
-            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_train.txt"))
+            # self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_train_no_white_crops.txt")) 
+            self.dataset_list.append(DOCUMENTS_Combined(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_combined_train_forged.txt"))
 
         elif mode == "valid":
-            # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_valid_list.txt"))
-            # self.dataset_list.append(FantasticReality(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/FR_auth_valid_list.txt", is_auth_list=True))
-            # self.dataset_list.append(IMD2020(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/IMD_valid_list.txt", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(CASIA(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/CASIA_v2_valid_list.txt", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(CASIA(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/CASIA_v2_auth_valid_list.txt", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/cm_COCO_valid_list.txt"))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/sp_COCO_valid_list.txt"))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcm_COCO_valid_list.txt"))
-            # self.dataset_list.append(tampCOCO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/bcmc_COCO_valid_list.txt"))
-            # self.dataset_list.append(compRAISE(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/compRAISE_valid.txt"))
-            # self.dataset_list.append(DEFACTO(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/defacto150.txt"))
-            # self.dataset_list.append(COCOannot(crop_size, grid_crop, blocks, DCT_channels, "defacto_val_tamp.txt", False))
-            # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
-            # self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val.txt"))
-            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_val.txt"))
+            # self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val_no_white_crops.txt"))
+            self.dataset_list.append(DOCUMENTS_Combined(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_combined_val_forged.txt"))
 
         elif mode == "arbitrary":
-            #  self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/genuine//*", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/forgeries_database/forgeries/copymove//*", read_from_jpeg=read_from_jpeg))
-            # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "/home/dperez/workspace/bbdd/ariadnext/GRADIANT_EVALUATION//*", read_from_jpeg=read_from_jpeg))
-            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_cm_test.txt"))
-            # self.dataset_list.append(Park(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/Djpeg_test.txt"))
+            self.dataset_list.append(DOCUMENTS(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/GIMP_images.txt"))
+            # self.dataset_list.append(arbitrary(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCUMENTS_v2_50-100_val.txt"))
+
         elif mode == "arbitraryCls":
-            # self.dataset_list.append(arbitraryCls(crop_size, grid_crop, blocks, DCT_channels, "./input//*", read_from_jpeg=read_from_jpeg))
-            self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val_filtered_no_white_crops.txt"))
+            self.dataset_list.append(arbitraryCls(crop_size, grid_crop, blocks, DCT_channels, "/media/data/workspace/rroman/CAT-Net/images//*", read_from_jpeg=read_from_jpeg))
+            # self.dataset_list.append(DOCIMANv2(crop_size, grid_crop, blocks, DCT_channels, "Splicing/data/DOCIMANv2_val_filtered_no_white_crops.txt"))
         else:
             raise KeyError("Invalid mode: " + mode)
         if class_weight is None:
@@ -87,7 +46,7 @@ class SplicingDataset(Dataset):
         self.blocks = blocks
         self.mode = mode
         self.read_from_jpeg = read_from_jpeg
-        self.smallest = 122412 # smallest dataset size (IMD:1869)
+        self.smallest = 31115 # 62080 #70342 31115 1059479 #len(self.dataset_list) # smallest dataset size (IMD:1869)
 
     def shuffle(self):
         for dataset in self.dataset_list:

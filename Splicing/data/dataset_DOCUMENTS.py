@@ -7,13 +7,13 @@ from tarfile import LENGTH_LINK
 from sklearn.model_selection import train_test_split
 import project_config
 from Splicing.data.AbstractDataset import AbstractDataset
-
+from collections import Counter
 import os
 import numpy as np
 from random import shuffle
 from PIL import Image
 from pathlib import Path
-import mlflow
+from random import shuffle
 
 class DOCUMENTS(AbstractDataset):
     """
@@ -22,8 +22,7 @@ class DOCUMENTS(AbstractDataset):
     ├── resized_images: 38478 images of text documents.
     │
     ├── forged_images:
-        ├── Splicing: 871317 images and their masks with QF combinations from 60 to 100. 
-        └── Copy-Move: 136014 images and their masks with QF combinations from 60 to 100, with step=5.
+        └── Copy-Move-50-100: 203476 images and their masks with QF combinations from 50 to 100, with step=2.
         
     
     """
@@ -31,7 +30,7 @@ class DOCUMENTS(AbstractDataset):
         """
         :param crop_size: (H,W) or None
         :param blocks:
-        :param tamp_list: EX: "Splicing/data/forgeries_documents_train.txt"
+        :param tamp_list: EX: "Splicing/data/DOCUMENTS_train.txt"
         :param read_from_jpeg: F=from original extension, T=from jpeg compressed image
         """
         super().__init__(crop_size, grid_crop, blocks, DCT_channels)
@@ -51,7 +50,7 @@ class DOCUMENTS(AbstractDataset):
             mask[mask > 0] = 1
 
         return self._create_tensor(tamp_path, mask)
-        
+
     def get_qtable(self, index):
         assert 0 <= index < len(self.tamp_list), f"Index {index} is not available!"
         tamp_path = self._root_path / self.tamp_list[index][0]
@@ -64,26 +63,56 @@ class DOCUMENTS(AbstractDataset):
 
 if __name__ == '__main__':
     root = project_config.dataset_paths['DOCUMENTS']
-    splicing_root = root / "forged_images/Splicing"
-    copy_move_root = root / "forged_images/Copy-move_high_resolution"
-    authentic_root = root / "resized_images"
-    # Splicing
+    documents_root = "forged_images/photos_documents_iphone_11"
     idx = 0
     list_data, list_train, list_val = [], [], []
 
-    for file in os.scandir(copy_move_root):
+    # with open("/media/data/workspace/rroman/CAT-Net/DOCUMENTS_photos.txt", "r") as f:
+    #     tamp_list = [t.strip().split(',') for t in f.readlines()]
+
+    # for image in tamp_list:
+    #     if "q2_80" in image[0] or "q2_84" in image[0]:
+    #         print(image[0])/
+    #         list_data.append(','.join([image[0], image[1]]))
+
+    for file in os.scandir(str(root)+"/"+documents_root):
         if idx % 1000 == 0:
-            print(idx)
+            print(idx, file.name)
         idx += 1
         if "mask" not in file.name:
-            list_data.append(str(Path("forged_images/Copy-move_high_resolution") / file.name))
+            list_data.append(','.join([str(Path(documents_root) / file.name), str(Path(documents_root) / Path(os.path.splitext(file.name)[0]+".mask.jpeg"))]))
 
+    # data_train, data_val = train_test_split(list_data, test_size=0.15, shuffle=True)
+    # for file in data_train:
+    #     list_train.append(','.join([file, str(os.path.splitext(file)[0]+".mask.jpeg")]))
     
-    for file in sorted(list_data):
-        list_train.append(','.join([file, str(os.path.splitext(file)[0]+".mask.jpeg")]))
+    # for file in data_val:
+    #     list_val.append(','.join([file, str(os.path.splitext(file)[0]+".mask.jpeg")]))
+    # shuffle(list_data)
+    # for qf1 in range(50, 101, 2):
+    #     for qf2 in range(50, 101, 2):
+    #         count, count_train = 0, 0
+    #         for file in list_data:
+    #             if "q1_"+str(qf1)+"_q2_"+str(qf2) in file:
+    #                 count += 1
+    #         print(f"Qf1={qf1}, qf2={qf2}, count={count}")
+    #         for file in list_data:
+    #             if "q1_"+str(qf1)+"_q2_"+str(qf2) in file:
+    #                 if count_train < int(0.9*count):
+    #                     list_train.append(','.join([file, str(os.path.splitext(file)[0]+".mask.jpeg")]))
+    #                     count_train += 1
+    #                 else:
+    #                     list_val.append(','.join([file, str(os.path.splitext(file)[0]+".mask.jpeg")]))
 
-    with open("DOCUMENTS.txt", "w") as f:
-        f.write('\n'.join(list_train)+'\n')
+
+    # print(len(list_train), len(list_val))
+    # shuffle(list_train)
+    # shuffle(list_val)
+
+    with open("DOCUMENTS_photos_iphone_11.txt", "w") as f:
+        f.write('\n'.join(list_data)+'\n')
+    # with open("DOCUMENTS_v3_50-100_val.txt", "w") as f:
+    #     f.write('\n'.join(list_val)+'\n')
 
         
 

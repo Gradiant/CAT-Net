@@ -37,6 +37,27 @@ class FullModel(nn.Module):
     loss = self.loss(outputs, labels)
     return torch.unsqueeze(loss,0), outputs
 
+class FullModelCombined(nn.Module):
+  """
+  Distribute the loss on multi-gpu to reduce 
+  the memory cost in the main gpu.
+  You can check the following discussion.
+  https://discuss.pytorch.org/t/dataparallel-imbalanced-memory-usage/22551/21
+  """
+  def __init__(self, model, loss_seg, loss_cls):
+    super(FullModelCombined, self).__init__()
+    self.model = model
+    self.loss_seg = loss_seg
+    self.loss_cls = loss_cls
+
+  def forward(self, inputs, masks, labels, qtable):
+    outputs_seg, outputs_cls = self.model(inputs, qtable)
+    loss_seg = self.loss_seg(outputs_seg, masks)
+    loss_cls = self.loss_cls(outputs_cls, labels)
+    loss = loss_seg + loss_cls
+    
+    return torch.unsqueeze(loss,0), torch.unsqueeze(loss_seg,0), torch.unsqueeze(loss_cls,0), outputs_seg, outputs_cls
+
 
 windows_mode = True
 def get_world_size():

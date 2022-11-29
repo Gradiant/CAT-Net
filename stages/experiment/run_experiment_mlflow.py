@@ -11,7 +11,8 @@ print(path)
 from tools.train import train_model
 from tools.infer import infer
 from tools.train_DCT_cls import train_model as train_model_cls
-
+from tools.train_combined import train_model as train_model_combined
+from tools.infer_combined import infer_combined
 from os import path as osp
 import fire
 import mlflow

@@ -31,10 +31,11 @@ class arbitraryCls(AbstractDatasetCls):
         assert 0 <= index < len(self.tamp_list), f"Index {index} is not available!"
         tamp_path = self.tamp_list[index]
         im = Image.open(tamp_path)
-        print(im.size)
-        label = 0
-        if tamp_path.count("_") == 2:
+
+        if "q2" in tamp_path: # provisional para "etiquetar" las imágenes directamente por el nombre
             label = 1
+        else:
+            label = 0
 
         if im.format != "JPEG":
             temp_jpg = f"____temp_{index:04d}.jpg"

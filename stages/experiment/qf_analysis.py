@@ -4,18 +4,18 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def qf_analysis(output_folder, list_data, cls_mode, epoch):
+def qf_analysis(output_folder, list_data, epoch, mode):
     with open(list_data, "r") as f:
         tamp_list = [t.strip().split(',') for t in f.readlines()]
 
-    if cls_mode:
+    if mode == "cls":
         list_single, list_double = [], []
         for image in tamp_list:
             label = int(image[1])
             pred = 1 if float(image[2]) >= 0.5 else 0
             if label == 1:
-                qf1 = int(image[0].split('_')[-3]) # DOCIMAN
-                qf2 = int(image[0].split("_")[-1].split(".")[0]) #DOCIMAN
+                qf1 = int(image[0].split('_')[-3])
+                qf2 = int(image[0].split("_")[-1].split(".")[0])
                 list_double.append((qf1, qf2, label, pred))
             if label == 0:
                 qf1 = int(image[0].split('_')[-1].split(".")[0])
@@ -55,26 +55,93 @@ def qf_analysis(output_folder, list_data, cls_mode, epoch):
             graphic_double.figure.savefig(str(output_folder)+"/qf_heatmap_"+epoch+".png")
         
 
-    else:
-        df= pd.DataFrame(tamp_list, columns=['img_name', 'qf1', 'qf2', 'mean_IoU', 'p_mIoU', 'p_AP', 'p_f1'], dtype=float)
-        df_mean = df.groupby(['qf1', 'qf2'], as_index=False)[["mean_IoU", "p_mIoU", "p_AP", "p_f1"]].mean()
+    elif mode == "seg":
+        df= pd.DataFrame(tamp_list, columns=['img_name', 'qf1', 'qf2', 'mean_IoU', 'IoU'], dtype=float)
+        df_mean = df.groupby(['qf1', 'qf2'], as_index=False)[["IoU"]].mean()
 
-        df_mIoU = df_mean.pivot("qf1", "qf2", "mean_IoU")
-        _, ax = plt.subplots(figsize=(30,25)) 
+        df_IoU = df_mean.pivot("qf1", "qf2", "IoU")
+        _, ax = plt.subplots(figsize=(30,25))
         sns.set(font_scale=2.5)
-        graphic_mIoU = sns.heatmap(df_mIoU, cmap="RdYlGn", annot=True, ax=ax, linewidths=0.01, linecolor='gray')
-        graphic_mIoU.set_xticklabels(graphic_mIoU.get_xmajorticklabels(), fontsize = 25)
-        graphic_mIoU.set_yticklabels(graphic_mIoU.get_ymajorticklabels(), fontsize = 25)
-        graphic_mIoU.invert_yaxis()
+        graphic_IoU = sns.heatmap(df_IoU, cmap="RdYlGn", annot=True, ax=ax, linewidths=0.01, linecolor='gray')
+        graphic_IoU.set_xticklabels(graphic_IoU.get_xmajorticklabels(), fontsize = 25)
+        graphic_IoU.set_yticklabels(graphic_IoU.get_ymajorticklabels(), fontsize = 25)
+        graphic_IoU.invert_yaxis()
 
         if epoch is None:
             df_mean.to_excel(str(output_folder)+"/qf_segmentation.xlsx")
-            graphic_mIoU.figure.savefig(str(output_folder)+"/qf_heatmap_mIoU.png")
+            graphic_IoU.figure.savefig(str(output_folder)+"/qf_heatmap_IoU.png")
         else:
             df_mean.to_excel(str(output_folder)+"/qf_segmentation_"+epoch+".xlsx")
-            graphic_mIoU.figure.savefig(str(output_folder)+"/qf_heatmap_mIoU"+epoch+".png")
+            graphic_IoU.figure.savefig(str(output_folder)+"/qf_heatmap_IoU"+epoch+".png")
+
+    elif mode == "combined":
+        with open(list_data, "r") as f:
+            tamp_list = [t.strip().split(',') for t in f.readlines()]
+
+        list_single, list_double = [], []
+        for image in tamp_list:
+            label = int(image[2])
+            if label == 1:
+                qf1 = int(image[0].split('_')[-3])
+                qf2 = int(image[0].split("_")[-1].split(".")[0])
+                list_double.append((qf1, qf2, image[1], label, int(image[4])))
+            if label == 0:
+                qf1 = int(image[0].split('_')[-1].split(".")[0])
+                list_single.append((qf1, label, int(image[4])))
 
 
+        if list_double != []:
+            # Classification part
+            df_double = pd.DataFrame(list_double, columns=['qf1', 'qf2', 'IoU', 'label', 'pred_class'], dtype=float)
+            df_count = df_double.groupby(['qf1', 'qf2'], as_index=False)[["label"]].count()
+            df_double['correct'] = df_double['label'] * df_double['pred_class']
+            df_correct = df_double.groupby(['qf1', 'qf2'], as_index=False)[["correct"]].sum()
+            df_cls = pd.concat([df_count, df_correct['correct']], axis=1)
+            df_cls['accuracy'] = df_cls['correct'] / df_cls['label']
+            if epoch is None:
+                df_cls.to_excel(str(output_folder)+"/qf_results_cls.xlsx")
+            else:
+                df_cls.to_excel(str(output_folder)+"/qf_results_cls"+epoch+".xlsx")
+
+            df_cls = df_cls.pivot('qf1', 'qf2', 'accuracy')
+            _, ax = plt.subplots(figsize=(40,35))
+            graphic_cls = sns.heatmap(df_cls, cmap="RdYlGn", annot=True, ax=ax, linewidths=0.01, linecolor='gray')
+            graphic_cls.invert_yaxis()
+            if epoch is None:
+                graphic_cls.figure.savefig(str(output_folder)+"/qf_heatmap_cls.png")
+            else:
+                graphic_cls.figure.savefig(str(output_folder)+"/qf_heatmap_cls"+epoch+".png")
+
+            # Segmentation part
+            df_mean = df_double.groupby(['qf1', 'qf2'], as_index=False)[["IoU"]].mean()
+            df_IoU = df_mean.pivot("qf1", "qf2", "IoU")
+            _, ax = plt.subplots(figsize=(30,25)) 
+            sns.set(font_scale=2.5)
+            graphic_IoU = sns.heatmap(df_IoU, cmap="RdYlGn", annot=True, ax=ax, linewidths=0.01, linecolor='gray')
+            graphic_IoU.set_xticklabels(graphic_IoU.get_xmajorticklabels(), fontsize = 25)
+            graphic_IoU.set_yticklabels(graphic_IoU.get_ymajorticklabels(), fontsize = 25)
+            graphic_IoU.invert_yaxis()
+
+            if epoch is None:
+                df_mean.to_excel(str(output_folder)+"/qf_segmentation.xlsx")
+                graphic_IoU.figure.savefig(str(output_folder)+"/qf_heatmap_IoU.png")
+            else:
+                df_mean.to_excel(str(output_folder)+"/qf_segmentation_"+epoch+".xlsx")
+                graphic_IoU.figure.savefig(str(output_folder)+"/qf_heatmap_IoU"+epoch+".png")
+
+        if list_single != []:
+            df_single = pd.DataFrame(list_single, columns=['qf1', 'label', 'pred_class'], dtype=float)
+            df_count = df_single.groupby(['qf1'], as_index=False)[["label"]].count()
+            df_single.loc[df_single['label'] == df_single['pred_class'], 'correct'] = 1
+            df_single.loc[df_single['label'] != df_single['pred_class'], 'correct'] = 0
+            df_correct = df_single.groupby(['qf1'], as_index=False)[["correct"]].sum()
+            df_single = pd.concat([df_count, df_correct['correct']], axis=1) 
+            df_single['accuracy'] = df_single['correct'] / df_single['label']
+
+            if epoch is None:
+                df_single.to_excel(str(output_folder)+"/qf_results_cls_single.xlsx") 
+            else:
+                df_single.to_excel(str(output_folder)+"/qf_results_cls_single_"+epoch+".xlsx")
 
 if __name__ == '__main__':
     qf_analysis()

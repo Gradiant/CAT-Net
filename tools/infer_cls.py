@@ -3,6 +3,7 @@
  mjkwon2021@gmail.com
  June 7, 2021
 """
+import json
 import sys, os
 from lib.core.function import get_next_filename
 from stages.experiment.histogram import show_histogram
@@ -31,6 +32,8 @@ import seaborn as sns; sns.set_theme()
 import os
 import mlflow
 from stages.experiment.roc_classification import plot_roc_curve
+import numpy as np
+import fire
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Infere classification network')
@@ -57,8 +60,14 @@ def infer_cls(show_mlflow=False):
     cudnn.benchmark = config.CUDNN.BENCHMARK
     cudnn.deterministic = config.CUDNN.DETERMINISTIC
     cudnn.enabled = config.CUDNN.ENABLED
+    save_metrics = True
 
-    test_dataset = splicing_dataset(crop_size=None, grid_crop=True, blocks=('DCTvol', 'qtable'), DCT_channels=1, mode='arbitraryCls', read_from_jpeg=True)  # DCT stream
+    if show_mlflow:
+        metrics_path = mlflow.get_artifact_uri()[7:]
+    else:
+        metrics_path = project_root
+
+    test_dataset = splicing_dataset(crop_size=(1024,1024), grid_crop=True, blocks=('DCTvol', 'qtable'), DCT_channels=1, mode='arbitraryCls', read_from_jpeg=True)  # DCT stream
 
     print(test_dataset.get_info())
     testloader = torch.utils.data.DataLoader(
@@ -99,13 +108,22 @@ def infer_cls(show_mlflow=False):
     correct_double = 0
     list_data = []
     val_accuracy = 0
+    starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+    timings = []
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
-
             image = image.cuda()
             label = label.long().cuda()
             model.eval()
-            _, output = model(image, label, qtable)
+            if index >= 10:
+                starter.record()
+                _, output = model(image, label, qtable)
+                ender.record()
+                torch.cuda.synchronize()
+                curr_time = starter.elapsed_time(ender)
+                timings.append(curr_time)
+            else:
+                _, output = model(image, label, qtable)
 
             filename = get_next_filename(index, test_dataset)
             _, pred1 = torch.max(output, 1)
@@ -141,24 +159,39 @@ def infer_cls(show_mlflow=False):
             del label
             torch.cuda.empty_cache()
 
-    output_data = "data.txt"
-    with open(output_data, "w") as f:
-        f.write('\n'.join(list_data)+'\n')
+    output_file = str(metrics_path)+"/data.txt"
+    with open(output_file, "w") as f:
+            f.write('\n'.join(list_data)+'\n')
 
     if show_mlflow:
-        output_path = mlflow.get_artifact_uri()[7:]
         metrics={
-                "valid_acc": val_accuracy
+                "valid_acc": val_accuracy,
+                "single_acc": (100 * correct_single) / (len_single),
+                "double_acc": (100 * correct_double) / (len_double)
         }
         mlflow.log_metrics(metrics)
-    else:
-        output_path = project_root
 
-    if len(test_dataset) > 1:
-        qf_analysis(output_path, output_data, cls_mode=True, epoch=None)
-        show_histogram(output_path, output_data, epoch=None)
-        plot_roc_curve(output_path, output_data, epoch=None)
+    if save_metrics and len(test_dataset) > 1:
+        qf_analysis(metrics_path, output_file, epoch=None, mode="cls")
+        show_histogram(metrics_path, output_file, epoch=None, mode="cls")
+        plot_roc_curve(metrics_path, output_file, epoch=None, mode="cls")
 
+    mean_syn = np.sum(np.array(timings)) / len(timings)
+    std_syn = np.std(np.array(timings))
+    print(mean_syn, std_syn)
+    with open(str(metrics_path)+"/inference_time.json", "w") as f:
+        json.dump(
+            {
+                "inference_time": [
+                    {
+                        "mean": np.mean(mean_syn),
+                        "std": np.max(std_syn),
+                    }
+                ],
+            },
+            f,
+            indent=4,
+        )
 
 if __name__ == '__main__':
-    infer_cls()
+    fire.Fire(infer_cls)

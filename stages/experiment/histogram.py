@@ -3,15 +3,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def show_histogram(output_file, list_data, epoch):
+def show_histogram(output_file, list_data, epoch, mode):
 
     with open(list_data, "r") as f:
         tamp_list = [t.strip().split(',') for t in f.readlines()]
 
     list_labels, list_scores = [], []
     for index in range(0, len(tamp_list)):
-        list_labels.append(int(tamp_list[index][1]))
-        list_scores.append(float(tamp_list[index][2]))
+        if mode == "cls":
+            list_labels.append(int(tamp_list[index][1]))
+            list_scores.append(float(tamp_list[index][2]))
+        elif mode == "combined":
+            list_labels.append(int(tamp_list[index][2]))
+            list_scores.append(float(tamp_list[index][3]))
 
     negative_pred, positive_pred = [], []
     for i, t in enumerate(list_scores):

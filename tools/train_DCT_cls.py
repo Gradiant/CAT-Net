@@ -25,7 +25,7 @@ from lib import models
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
 from stages.experiment.roc_classification import plot_roc_curve
-
+import fire
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train classification network')
@@ -144,7 +144,7 @@ def train_model():
         train_dataset.shuffle()  # for class-balanced sampling
         train(config, epoch, config.TRAIN.END_EPOCH,
               epoch_iters, config.TRAIN.LR, num_iters,
-              trainloader, optimizer, model, writer_dict, final_output_dir)
+              trainloader, optimizer, model, writer_dict)
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -157,13 +157,13 @@ def train_model():
         gc.collect()
         time.sleep(3.0)
 
-        output_data = output_folder+"/data_segmentation_"+str(epoch+1)+".txt"
+        output_data = output_folder+"/data_classification_"+str(epoch+1)+".txt"
         with open(output_data, "w") as f:
                 f.write('\n'.join(list_data)+'\n')
 
-        qf_analysis(output_folder, output_data, cls_mode=True, epoch=str(epoch+1))
-        show_histogram(output_folder, output_data, str(epoch+1))
-        plot_roc_curve(output_folder, output_data, str(epoch+1))
+        qf_analysis(output_folder, output_data, epoch=str(epoch+1), mode="cls")
+        show_histogram(output_folder, output_data, str(epoch+1), mode="cls")
+        plot_roc_curve(output_folder, output_data, str(epoch+1), mode="cls")
 
         if valid_acc > best_acc:
             best_acc = valid_acc
@@ -173,7 +173,7 @@ def train_model():
                 'best_acc': best_acc,
                 'state_dict': model.model.module.state_dict(),
                 'optimizer': optimizer.state_dict(),
-            }, os.path.join(final_output_dir, 'best.pth.tar'))
+            }, os.path.join(final_output_dir, 'best_epoch_'+str(epoch+1)+'.pth.tar'))
             logger.info("best.pth.tar updated.")
 
         msg = '(Valid) Loss: {:.3f}, Val Acc: {: 4.4f}'.format(valid_loss, valid_acc)
@@ -199,4 +199,4 @@ def train_model():
 
     
 if __name__ == '__main__':
-    train_model()
+    fire.Fire(train_model)

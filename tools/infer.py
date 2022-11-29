@@ -3,6 +3,7 @@
  mjkwon2021@gmail.com
  June 7, 2021
 """
+import json
 import sys, os
 
 from sklearn.metrics import average_precision_score
@@ -14,12 +15,6 @@ if path not in sys.path:
     sys.path.insert(0, path)
 
 import argparse
-import pprint
-import shutil
-
-import logging
-import time
-import timeit
 from pathlib import Path
 
 import numpy as np
@@ -34,9 +29,8 @@ from lib import models
 from lib.config import config
 from lib.config import update_config
 from lib.core.criterion import CrossEntropy, OhemCrossEntropy
-from lib.core.function import get_next_filename, train, validate
-from lib.utils.modelsummary import get_model_summary
-from lib.utils.utils import AverageMeter, AverageMeter, create_logger, FullModel, get_rank
+from lib.core.function import get_next_filename, validate
+from lib.utils.utils import AverageMeter, AverageMeter, FullModel
 
 from Splicing.data.data_core import SplicingDataset as splicing_dataset
 from pathlib import Path
@@ -48,6 +42,8 @@ import mlflow
 from PIL import Image
 import mlflow
 from PIL import Image
+import numpy as np
+import fire
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train segmentation network')
@@ -67,19 +63,24 @@ def parse_args():
     return args
 
 
-def infer(show_mlflow):
+def infer(show_mlflow=False):
 
     ## CHOOSE ##
     FULL_OPT = False
     save_metrics = True
-    metrics_path = "./data_segmentation.txt"
+    if show_mlflow:
+        metrics_path = mlflow.get_artifact_uri()[7:]
+        print(metrics_path)
+        Path(mlflow.get_artifact_uri()[7:]+"/Masks/").mkdir(parents=True, exist_ok=True)
+    else:
+        metrics_path = project_root
     ##working option
     # # if FULL_OPT:
     # #     args = argparse.Namespace(cfg='experiments/CAT_full.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     # # else:    
     # #     args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_full/CAT_full_v2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
 
-    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/finetuning_DCT_DOCIMANv2_DOCUMENTS_cm_best.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/best_9_50_100.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
     # cudnn related setting
@@ -134,6 +135,7 @@ def infer(show_mlflow):
     dataset_paths['SAVE_PRED'].mkdir(parents=True, exist_ok=True)
 
     avg_acc = AverageMeter()
+    avg_IoU = AverageMeter()
     avg_p_acc = AverageMeter()
     avg_mIoU = AverageMeter()
     avg_p_mIoU = AverageMeter()
@@ -142,7 +144,9 @@ def infer(show_mlflow):
     avg_AP = AverageMeter()
     avg_p_AP = AverageMeter()
     list_data = []
-
+    starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+    timings = []
+                
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
             filename = get_next_filename(index, test_dataset)
@@ -153,26 +157,49 @@ def infer(show_mlflow):
             print("Size of image {}x{} -> {:.2f}MB".format(label.size()[1],label.size()[2], label.size()[1]*label.size()[2]/1000000))
             
             mb_size = label.size()[1]*label.size()[2]/1000000
-            if mb_size > 9:
+            if mb_size > 12.2:
                 print("Skip image, too big image!")
                 continue
             
+            if show_mlflow:
+                label_np = label.cpu().numpy()
+                Image.fromarray((label_np[0] * 255).astype(np.uint8)).save(metrics_path+"/Masks/"+filename.split(".")[-2]+".png")
             size = label.size()
             image = image.cuda()
             label = label.long().cuda()
             model.eval()
-            _, pred = model(image, label, qtable)
+
+            if index >= 10:
+                starter.record()
+                _, pred = model(image, label, qtable)
+                ender.record()
+                torch.cuda.synchronize()
+                curr_time = starter.elapsed_time(ender)
+                timings.append(curr_time)
+            else:
+                _, pred = model(image, label, qtable)
             pred = torch.squeeze(pred, 0)
             pred = F.softmax(pred, dim=0)[1]
             pred1 = pred.cpu().numpy()
 
             pred = pred.unsqueeze(0).unsqueeze(0)
-
             if pred.size()[-2] != size[-2] or pred.size()[-1] != size[-1]:
                 pred = F.upsample(pred, (size[-2], size[-1]), mode='bilinear', align_corners=False)
 
-            pred_r = pred.cpu().numpy().squeeze(axis=0).squeeze(axis=0).ravel()
-            label_r = label.cpu().numpy().squeeze(axis=0).ravel()
+            pred = pred.cpu().numpy().squeeze(axis=0).squeeze(axis=0)
+            label = label.cpu().numpy().squeeze(axis=0)
+
+            if show_mlflow:
+                Path(mlflow.get_artifact_uri()[7:]+"/Predictions/").mkdir(parents=True, exist_ok=True)
+                filepath = mlflow.get_artifact_uri()[7:]+"/Predictions/"+filename
+            else:
+                filepath = dataset_paths['SAVE_PRED'] / filename
+            
+            pred_mask = (pred >= 0.5)
+            Image.fromarray((pred_mask * 255).astype(np.uint8)).save(filepath)
+
+            pred_r = pred.ravel()
+            label_r = label.ravel()
             pred_r = pred_r[label_r != -1]
             label_r = label_r[label_r != -1]
             bin_pred = (pred_r >= 0.5).astype(np.float)
@@ -182,7 +209,8 @@ def infer(show_mlflow):
             TN = np.count_nonzero(correct[label_r==0])
             FP = np.count_nonzero(incorrect[label_r==0])
             FN = np.count_nonzero(incorrect[label_r==1])
-
+            IoU = TP / np.maximum(1.0,(TP+FP+FN))
+            avg_IoU.update(IoU)
             mean_IoU = 0.5 * (TP / np.maximum(1.0, TP + FP + FN)) + 0.5 * (TN / np.maximum(1.0, FP + TN + FN))
             avg_mIoU.update(mean_IoU)
             p_mIoU = 0.5 * (FN / np.maximum(1.0, FN + TP + TN)) + 0.5 * (FP / np.maximum(1.0, FP + TP + TN))
@@ -204,20 +232,11 @@ def infer(show_mlflow):
             width_im, heigh_im = np.shape(pred1)
             print("% mod {:.2f}% and max value {}".format(100*pred1.sum()/(width_im*heigh_im), pred1.max()))
             
-            print(mean_IoU, p_mIoU, p_AP, p_f1)
-            qf1 = filename.split("_")[-2]
-            qf2 = filename.split("_")[-1].split(".")[0]
-            print(filename, qf1, qf2)
-            list_data.append(','.join((filename, qf1, qf2, str(mean_IoU), str(p_mIoU), str(p_AP), str(p_f1))))
-
-            # filename
-            filename = os.path.splitext(filename)[0] + ".png"
-            if show_mlflow:
-                Path(mlflow.get_artifact_uri()[7:]+"/Predictions/").mkdir(parents=True, exist_ok=True)
-                filepath = mlflow.get_artifact_uri()[7:]+"/Predictions/"+filename
-            else:
-                filepath = dataset_paths['SAVE_PRED'] / filename
-            
+            print(mean_IoU, IoU)
+            if filename.count("_") > 2:
+                qf1 = filename.split('_')[-3]
+                qf2 = filename.split("_")[-1].split(".")[0]
+                list_data.append(','.join((filename, qf1, qf2, str(mean_IoU), str(IoU))))
 
             del image
             del label
@@ -225,25 +244,24 @@ def infer(show_mlflow):
             torch.cuda.empty_cache()
 
             # plot
-            try:
-                width = pred1.shape[1]  # in pixels
-                fig = plt.figure(frameon=False)
-                dpi = 40  # fig.dpi
-                fig.set_size_inches(width / dpi, ((width * pred1.shape[0])/pred1.shape[1]) / dpi)
-                sns.heatmap(pred1, vmin=0, vmax=1, cbar=False, cmap='jet', )
-                plt.axis('off')
-                plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
-                plt.close(fig)
-            except:
-                print(f"Error occurred while saving output. ({filename})")
+            # if save_metrics:
+            #     try:
+            #         width = pred1.shape[1]  # in pixels
+            #         fig = plt.figure(frameon=False)
+            #         dpi = 40  # fig.dpi
+            #         fig.set_size_inches(width / dpi, ((width * pred1.shape[0])/pred1.shape[1]) / dpi)
+            #         sns.heatmap(pred1, vmin=0, vmax=1, cbar=False, cmap='jet', )
+            #         plt.axis('off')
+            #         plt.savefig(filepath, bbox_inches='tight', transparent=True, pad_inches=0)
+            #         plt.close(fig)
+            #     except:
+            #         print(f"Error occurred while saving output. ({filename})")
     
-    if save_metrics:
-        with open(metrics_path, "w") as f:
-            f.write('\n'.join(list_data)+'\n')
+    
 
     results = {'avg_p_acc': avg_p_acc.average(),
+               'avg_IoU': avg_IoU.average(),
                'avg_mIoU': avg_mIoU.average(),
-               'avg_p_mIoU': avg_p_mIoU.average(),
                'avg_p_F1': avg_p_F1.average(),
                'avg_p_AP': avg_p_AP.average(),
                'avg_AP':  avg_AP.average(),
@@ -251,12 +269,33 @@ def infer(show_mlflow):
                }
     print(results)
 
+    if save_metrics:
+        output_file = str(metrics_path)+"/data_segmentation.txt"
+        with open(output_file, "w") as f:
+            f.write('\n'.join(list_data)+'\n')
+        qf_analysis(metrics_path, output_file, mode="seg", epoch=None)
+        
     if show_mlflow:
         mlflow.log_metrics(results)
-        qf_analysis(mlflow.get_artifact_uri()[7:], metrics_path, cls_mode=False, epoch=None)
-    else:
-        qf_analysis(project_root, metrics_path, cls_mode=False, epoch=None)
+    
+    mean_syn = np.sum(np.array(timings)) / len(timings)
+    std_syn = np.std(np.array(timings))
+    print(mean_syn, std_syn)
+    with open(str(metrics_path)+"/inference_time.json", "w") as f:
+        json.dump(
+            {
+                "inference_time": [
+                    {
+                        "mean": np.mean(mean_syn),
+                        "std": np.max(std_syn),
+                    }
+                ],
+            },
+            f,
+            indent=4,
+        )
+
     
     
 if __name__ == '__main__':
-    infer()
+    fire.Fire(infer)

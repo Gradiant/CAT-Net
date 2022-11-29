@@ -4,14 +4,18 @@ import matplotlib.pyplot as plt
 
 
 
-def plot_roc_curve(output_file, list_data, epoch):
+def plot_roc_curve(output_file, list_data, epoch, mode):
     with open(list_data, "r") as f:
         tamp_list = [t.strip().split(',') for t in f.readlines()]
 
     list_scores, list_labels = [], []
     for index in range(0, len(tamp_list)):
-        list_labels.append(int(tamp_list[index][1]))
-        list_scores.append(float(tamp_list[index][2]))
+        if mode == "cls":
+            list_labels.append(int(tamp_list[index][1]))
+            list_scores.append(float(tamp_list[index][2]))
+        elif mode == "combined":
+            list_labels.append(int(tamp_list[index][2]))
+            list_scores.append(float(tamp_list[index][3]))
 
     y = np.array(list_labels)
     scores = np.array(list_scores)
