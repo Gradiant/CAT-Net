@@ -48,7 +48,7 @@ def parse_args():
 
 def train_model():
     
-    args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', local_rank=0, opts=None)
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_MobileNetv3.yaml', local_rank=0, opts=None)
     update_config(config, args)
     output_folder = mlflow.get_artifact_uri()[7:]
 
@@ -69,7 +69,7 @@ def train_model():
 
     # build model
     model = eval('models.' + config.MODEL.NAME +
-                 '.get_cls_net')(config)
+                 '.get_mobileNet_cls')(config)
 
     writer_dict = {
         # 'writer': SummaryWriter(tb_log_dir),

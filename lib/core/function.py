@@ -168,7 +168,6 @@ def validate(config, testloader, model, test_dataset):
     confusion_matrix = np.zeros(
         (config.DATASET.NUM_CLASSES, config.DATASET.NUM_CLASSES))
     avg_mIoU = AverageMeter()
-    avg_p_mIoU = AverageMeter()
     f1_array = np.array([])
     precission_array = np.array([])
     recall_array = np.array([])

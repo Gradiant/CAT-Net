@@ -62,7 +62,7 @@ def train_model():
     # Instead of using argparse, force these args:
     ## CHOOSE ##
     # args = argparse.Namespace(cfg='experiments/CAT_full.yaml', local_rank=0, opts=None)
-    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', local_rank=0, opts=None)
+    args = argparse.Namespace(cfg='experiments/CAT_DCT_MobileNetv3.yaml', local_rank=0, opts=None)
     output_folder = mlflow.get_artifact_uri()[7:]
     update_config(config, args)
 
@@ -83,7 +83,7 @@ def train_model():
 
     # build model
     model = eval('models.' + config.MODEL.NAME +
-                 '.get_seg_model')(config)
+                 '.get_mobileNet_seg')(config)
 
     writer_dict = {
         # 'writer': SummaryWriter(tb_log_dir),
@@ -155,7 +155,7 @@ def train_model():
 
     epoch_iters = np.int(train_dataset.__len__() /
                          config.TRAIN.BATCH_SIZE_PER_GPU / len(gpus))
-    best_mIoU, last_epoch = 0, 0
+    best_IoU, last_epoch = 0, 0
 
     end_epoch = config.TRAIN.END_EPOCH + config.TRAIN.EXTRA_EPOCH
     num_iters = config.TRAIN.END_EPOCH * epoch_iters
@@ -190,7 +190,7 @@ def train_model():
                 }, os.path.join(final_output_dir, 'best_'+str(epoch)+'_.pth.tar'))
                 logger.info("best.pth.tar updated.")
 
-            msg = '(Valid) Loss: {:.3f}, MeanIU: {: 4.4f}, Best_mIoU: {: 4.4f}, avg_mIoU: {: 4.4f}, avg_p_mIoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, Mean_Acc: {: 4.4f}'.format(
+            msg = '(Valid) Loss: {:.3f}, Best_IoU: {: 4.4f}, avg_mIoU: {: 4.4f}, avg_IoU: {: 4.4f}, Pixel_Acc: {: 4.4f}, Mean_Acc: {: 4.4f}'.format(
                 valid_loss, best_IoU, avg_mIoU, avg_IoU, pixel_acc, mean_acc)
 
             metrics={
@@ -226,7 +226,7 @@ def train_model():
             os.path.join(final_output_dir, 'checkpoint_epoch_'+str(epoch+1)+'.pth.tar')))
         torch.save({
             'epoch': epoch + 1,
-            'best_mIoU': best_mIoU,
+            'best_mIoU': best_IoU,
             'state_dict': model.model.module.state_dict(),
             'optimizer': optimizer.state_dict(),
         }, os.path.join(final_output_dir, 'checkpoint_epoch_'+str(epoch+1)+'.pth.tar'))

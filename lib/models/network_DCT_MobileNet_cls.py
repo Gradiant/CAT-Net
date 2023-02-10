@@ -71,63 +71,112 @@ blocks_dict = {
     'BASIC': BasicBlock,
 }
 
-class hswish(nn.Module):
-    def forward(self, x):
-        out = x * F.relu6(x + 3, inplace=True) / 6
-        return out
+def conv_bn(inp, oup, stride, conv_layer=nn.Conv2d, norm_layer=nn.BatchNorm2d, nlin_layer=nn.ReLU):
+    return nn.Sequential(
+        conv_layer(inp, oup, 3, stride, 1, bias=False),
+        norm_layer(oup),
+        nlin_layer(inplace=True)
+    )
 
-class hsigmoid(nn.Module):
-    def forward(self, x):
-        out = F.relu6(x + 3, inplace=True) / 6
-        return out
 
-class SeModule(nn.Module):
-    def __init__(self, in_size, reduction=4):
-        super(SeModule, self).__init__()
-        self.se = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_size, in_size // reduction, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(in_size // reduction),
+def conv_1x1_bn(inp, oup, conv_layer=nn.Conv2d, norm_layer=nn.BatchNorm2d, nlin_layer=nn.ReLU):
+    return nn.Sequential(
+        conv_layer(inp, oup, 1, 1, 0, bias=False),
+        norm_layer(oup),
+        nlin_layer(inplace=True)
+    )
+
+
+class Hswish(nn.Module):
+    def __init__(self, inplace=True):
+        super(Hswish, self).__init__()
+        self.inplace = inplace
+
+    def forward(self, x):
+        return x * F.relu6(x + 3., inplace=self.inplace) / 6.
+
+
+class Hsigmoid(nn.Module):
+    def __init__(self, inplace=True):
+        super(Hsigmoid, self).__init__()
+        self.inplace = inplace
+
+    def forward(self, x):
+        return F.relu6(x + 3., inplace=self.inplace) / 6.
+
+
+class SEModule(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super(SEModule, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction, bias=False),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_size // reduction, in_size, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(in_size),
-            hsigmoid()
+            nn.Linear(channel // reduction, channel, bias=False),
+            Hsigmoid()
         )
 
     def forward(self, x):
-        return x * self.se(x)
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y.expand_as(x)
 
-class Block(nn.Module):
-    '''expand + depthwise + pointwise'''
-    def __init__(self, kernel_size, in_size, expand_size, out_size, nolinear, semodule, stride):
-        super(Block, self).__init__()
-        self.stride = stride
-        self.se = semodule
 
-        self.conv1 = nn.Conv2d(in_size, expand_size, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn1 = nn.BatchNorm2d(expand_size)
-        self.nolinear1 = nolinear
-        self.conv2 = nn.Conv2d(expand_size, expand_size, kernel_size=kernel_size, stride=stride, padding=kernel_size//2, groups=expand_size, bias=False)
-        self.bn2 = nn.BatchNorm2d(expand_size)
-        self.nolinear2 = nolinear
-        self.conv3 = nn.Conv2d(expand_size, out_size, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn3 = nn.BatchNorm2d(out_size)
-
-        self.shortcut = nn.Sequential()
-        if stride == 1 and in_size != out_size:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(in_size, out_size, kernel_size=1, stride=1, padding=0, bias=False),
-                nn.BatchNorm2d(out_size),
-            )
+class Identity(nn.Module):
+    def __init__(self, channel):
+        super(Identity, self).__init__()
 
     def forward(self, x):
-        out = self.nolinear1(self.bn1(self.conv1(x)))
-        out = self.nolinear2(self.bn2(self.conv2(out)))
-        out = self.bn3(self.conv3(out))
-        if self.se != None:
-            out = self.se(out)
-        out = out + self.shortcut(x) if self.stride==1 else out
-        return out
+        return x
+
+
+def make_divisible(x, divisible_by=8):
+    import numpy as np
+    return int(np.ceil(x * 1. / divisible_by) * divisible_by)
+
+
+class MobileBottleneck(nn.Module):
+    def __init__(self, inp, oup, kernel, stride, exp, se=False, nl='RE'):
+        super(MobileBottleneck, self).__init__()
+        assert stride in [1, 2]
+        assert kernel in [3, 5]
+        padding = (kernel - 1) // 2
+        self.use_res_connect = stride == 1 and inp == oup
+
+        conv_layer = nn.Conv2d
+        norm_layer = nn.BatchNorm2d
+        if nl == 'RE':
+            nlin_layer = nn.ReLU # or ReLU6
+        elif nl == 'HS':
+            nlin_layer = Hswish
+        else:
+            raise NotImplementedError
+        if se:
+            SELayer = SEModule
+        else:
+            SELayer = Identity
+
+        self.conv = nn.Sequential(
+            # pw
+            conv_layer(inp, exp, 1, 1, 0, bias=False),
+            norm_layer(exp),
+            nlin_layer(inplace=True),
+            # dw
+            conv_layer(exp, exp, kernel, stride, padding, groups=exp, bias=False),
+            norm_layer(exp),
+            SELayer(exp),
+            nlin_layer(inplace=True),
+            # pw-linear
+            conv_layer(exp, oup, 1, 1, 0, bias=False),
+            norm_layer(oup),
+        )
+
+    def forward(self, x):
+        if self.use_res_connect:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
 
 
 class DCT_Stream(nn.Module):
@@ -171,33 +220,90 @@ class DCT_Stream(nn.Module):
                 padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0)
         )
 
-        # self.MobileNetv3 = MobileNetV3_Small(num_classes=2)
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(16)
-        self.hs1 = hswish()
+        # mobilenet
+        input_channel = 16
+        last_channel = 1280
+        input_size=1024
+        mode='small'
+        width_mult=1.0
 
-        self.bneck = nn.Sequential(
-            Block(3, 16, 16, 16, nn.ReLU(inplace=True), SeModule(16), 2),
-            Block(3, 16, 72, 24, nn.ReLU(inplace=True), None, 2),
-            Block(3, 24, 88, 24, nn.ReLU(inplace=True), None, 1),
-            Block(5, 24, 96, 40, hswish(), SeModule(40), 2),
-            Block(5, 40, 240, 40, hswish(), SeModule(40), 1),
-            Block(5, 40, 240, 40, hswish(), SeModule(40), 1),
-            Block(5, 40, 120, 48, hswish(), SeModule(48), 1),
-            Block(5, 48, 144, 48, hswish(), SeModule(48), 1),
-            Block(5, 48, 288, 96, hswish(), SeModule(96), 2),
-            Block(5, 96, 576, 96, hswish(), SeModule(96), 1),
-            Block(5, 96, 576, 96, hswish(), SeModule(96), 1),
+        if mode == 'large':
+            # refer to Table 1 in paper
+            mobile_setting = [
+                # k, exp, c,  se,     nl,  s,
+                [3, 16,  16,  False, 'RE', 1],
+                [3, 64,  24,  False, 'RE', 2],
+                [3, 72,  24,  False, 'RE', 1],
+                [5, 72,  40,  True,  'RE', 2],
+                [5, 120, 40,  True,  'RE', 1],
+                [5, 120, 40,  True,  'RE', 1],
+                [3, 240, 80,  False, 'HS', 2],
+                [3, 200, 80,  False, 'HS', 1],
+                [3, 184, 80,  False, 'HS', 1],
+                [3, 184, 80,  False, 'HS', 1],
+                [3, 480, 112, True,  'HS', 1],
+                [3, 672, 112, True,  'HS', 1],
+                [5, 672, 160, True,  'HS', 2],
+                [5, 960, 160, True,  'HS', 1],
+                [5, 960, 160, True,  'HS', 1],
+            ]
+        elif mode == 'small':
+            # refer to Table 2 in paper
+            mobile_setting = [
+                # k, exp, c,  se,     nl,  s,
+                [3, 16,  16,  True,  'RE', 2],
+                [3, 72,  24,  False, 'RE', 2],
+                [3, 88,  24,  False, 'RE', 1],
+                [5, 96,  40,  True,  'HS', 2],
+                [5, 240, 40,  True,  'HS', 1],
+                [5, 240, 40,  True,  'HS', 1],
+                [5, 120, 48,  True,  'HS', 1],
+                [5, 144, 48,  True,  'HS', 1],
+                [5, 288, 96,  True,  'HS', 2],
+                [5, 576, 96,  True,  'HS', 1],
+                [5, 576, 96,  True,  'HS', 1],
+            ]
+        else:
+            raise NotImplementedError
+
+        # building first layer
+        assert input_size % 32 == 0
+        last_channel = make_divisible(last_channel * width_mult) if width_mult > 1.0 else last_channel
+        self.features = [conv_bn(3, input_channel, 2, nlin_layer=Hswish)]
+        self.classifier = []
+
+        # building mobile blocks
+        for k, exp, c, se, nl, s in mobile_setting:
+            output_channel = make_divisible(c * width_mult)
+            exp_channel = make_divisible(exp * width_mult)
+            self.features.append(MobileBottleneck(input_channel, output_channel, k, s, exp_channel, se, nl))
+            input_channel = output_channel
+
+        # building last several layers
+        if mode == 'large':
+            last_conv = make_divisible(960 * width_mult)
+            self.features.append(conv_1x1_bn(input_channel, last_conv, nlin_layer=Hswish))
+            self.features.append(nn.AdaptiveAvgPool2d(1))
+            self.features.append(nn.Conv2d(last_conv, last_channel, 1, 1, 0))
+            self.features.append(Hswish(inplace=True))
+        elif mode == 'small':
+            last_conv = make_divisible(576 * width_mult)
+            self.features.append(conv_1x1_bn(input_channel, last_conv, nlin_layer=Hswish))
+            self.features.append(nn.AdaptiveAvgPool2d(1))
+            self.features.append(nn.Conv2d(last_conv, last_channel, 1, 1, 0))
+            self.features.append(Hswish(inplace=True))
+        else:
+            raise NotImplementedError
+
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+
+        # building classifier
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=0.8),    # refer to paper section 6
+            nn.Linear(last_channel, 2),
         )
-
-
-        self.conv2 = nn.Conv2d(96, 576, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn2 = nn.BatchNorm2d(576)
-        self.hs2 = hswish()
-        self.linear3 = nn.Linear(576, 1280)
-        self.bn3 = nn.BatchNorm1d(1280)
-        self.hs3 = hswish()
-        self.linear4 = nn.Linear(1280, 2)
+        
 
     def _make_transition_layer(
             self, num_channels_pre_layer, num_channels_cur_layer):
@@ -264,17 +370,11 @@ class DCT_Stream(nn.Module):
         x2 = xq_temp.reshape(B, C, H, W)  # [16, 3, 256, 256]
         x = torch.cat([x1, x2], dim=1) # [B, 6, 256, 256]
         x = self.dc_layer2(x)  # # [B, 3, 256, 256]
-        print(torch.cuda.is_available())
+        print(x.shape) # entrada mobilenetv3
+        x = self.features(x)
+        x = x.mean(3).mean(2)
+        x = self.classifier(x)
         print(x.is_cuda)
-        out = self.hs1(self.bn1(self.conv1(x)))
-        out = self.bneck(out)
-        out = self.hs2(self.bn2(self.conv2(out))) # [16, 576, 8, 8]
-        out = F.avg_pool2d(out, 7) # [B, 576, 1, 1]
-        out = out.view(out.size(0), -1) # [16, 576]
-        out = self.hs3(self.bn3(self.linear3(out))) # [16, 1280]
-        x = self.linear4(out)
-        
-        # x = self.last_layer(x) # [2, 64, 64] para segmentacion
 
         return x
 
@@ -301,7 +401,7 @@ class DCT_Stream(nn.Module):
             logger.warning('=> Cannot load pretrained DCT')
 
 
-def get_mobileNet(cfg, **kwargs):
+def get_mobileNet_cls(cfg, **kwargs):
     model = DCT_Stream(cfg, **kwargs)
     model.init_weights(cfg.MODEL.PRETRAINED_RGB, cfg.MODEL.PRETRAINED_DCT)
 
