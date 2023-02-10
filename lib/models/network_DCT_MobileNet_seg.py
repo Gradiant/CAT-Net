@@ -477,17 +477,11 @@ class DCT_Stream(nn.Module):
         early = self.features1(x) # [B, 16, 256, 256]
         print(early.is_cuda)
         c1 = self.layer1(early) # [B, 16, 128, 128] 1/4
-        # print(c1.is_cuda)
         c2 = self.layer2(c1) # [B, 24, 64, 64] 1/8
-        # print(c2.is_cuda)
         c3 = self.layer3(c2) # [B, 40, 32, 32] 1/16
-        # print(c3.is_cuda)
         c4 = self.layer4(c3) # [B, 48, 32, 32] 1/16
-        # print(c4.is_cuda)
         c5 = self.layer5(c4) # [B, 96, 16, 16]
-        # print(c5.is_cuda)
         cout = self.features2(c5) # [B, 576, 16, 16]
-        # print(cout.is_cuda)
         #segmentación ASPP
         x = self.head(c2, c4) # [B, 2, 128, 128]
         print(x.is_cuda)
