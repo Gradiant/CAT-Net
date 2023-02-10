@@ -34,15 +34,5 @@ stages:
 #         - results/data/transform/coco_to_mmsegmentation-defacto/masks/${item}
 
  run_experiment_mlflow:
-    cmd: export MLFLOW_TRACKING_URI="http://10.10.30.58:8999/" && export CUDA_VISIBLE_DEVICES="2" &&
+    cmd: export MLFLOW_TRACKING_URI="http://10.5.0.58:8999/" && export CUDA_VISIBLE_DEVICES="1" &&
       mlflow run . --experiment-name catnet-auth --no-conda
-      # -P dataset=configs/datasets/TWD.py
-      # -P model=configs/models/retinanet_r50_fpn.py
-      # -P optimizer=configs/optimizers/SGD.py
-      # -P scheduler=configs/schedulers/one_cycle_8_epochs.py
-      # -P gpus=2
-    # deps:
-      # - configs
-      # - results/data/transform/property_split-TWD
-    metrics:
-      - results/metrics.js

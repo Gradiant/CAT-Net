@@ -9,3 +9,5 @@ log/
 *.png
 *.jpg
 output_pred/
+Splicing/data/
+images/

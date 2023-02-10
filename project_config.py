@@ -11,7 +11,7 @@ dataset_paths = {
     # Specify where are the roots of the datasets.
     #'FR': dataset_root / "FantasticReality_v1",
     #'IMD': dataset_root / "IMD2020",
-    # 'CASIA': dataset_root / "CASIA/CASIAv2",
+    'CASIA': dataset_root / "CASIA/CASIAv2",
     # 'NC16': dataset_root / "NC2016_Test",
     # 'Columbia': dataset_root / "Columbia Uncompressed Image Splicing Detection",
     # 'Carvalho': dataset_root / "tifs-database",
@@ -23,7 +23,11 @@ dataset_paths = {
     'COCOannot_images_val': dataset_root / "DEFACTO-12K/images/",
     'COCOannot_masks_val': "results/data/transform/coco_to_mmsegmentation-defacto/masks/val/",
     'COCOannot_list': "results/data/transform/coco_to_mmsegmentation-defacto/",
-
+    'Park': "/media/VA/BM_tmp/databases/Park/",
+    'DOCIMANv1': dataset_root / "dociman/DOCIMANv1/",
+    'DOCIMANv2': dataset_root / "dociman/DOCIMANv2/",
+    'DOCUMENTS': dataset_root / "forgeries_documents/",
+    
     # 'compRAISE': dataset_root / "compRAISE",
     # 'COVERAGE': dataset_root / "COVERAGE",
     # 'CoMoFoD': dataset_root / "CoMoFoD_small_v2",

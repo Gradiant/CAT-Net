@@ -404,18 +404,18 @@ class DCT_Stream(nn.Module):
         return nn.Sequential(*modules), num_inchannels
 
     def forward(self, x, qtable):
-        DCTcoef = x
-        x = self.dc_layer0_dil(DCTcoef)
-        x = self.dc_layer1_tail(x)
+        DCTcoef = x # B, 21, 512, 512
+        x = self.dc_layer0_dil(DCTcoef) # B, 64, 512, 512
+        x = self.dc_layer1_tail(x) # B, 4, 512, 512
         B, C, H, W = x.shape
         x0 = x.reshape(B, C, H // 8, 8, W // 8, 8).permute(0, 1, 3, 5, 2, 4).reshape(B, 64 * C, H // 8,
-                                                                                     W // 8)  # [B, 256, 32, 32]
-        x_temp = x.reshape(B, C, H // 8, 8, W // 8, 8).permute(0, 1, 3, 5, 2, 4)  # [B, C, 8, 8, 32, 32]
+                                                                                     W // 8)  # [B, 256, 64, 64] / [B, 256, 32, 32] if img_size=256
+        x_temp = x.reshape(B, C, H // 8, 8, W // 8, 8).permute(0, 1, 3, 5, 2, 4)  # [B, C, 8, 8, 64, 64] / [B, C, 8, 8, 32, 32]
         q_temp = qtable.unsqueeze(-1).unsqueeze(-1)  # [B, 1, 8, 8, 1, 1]
-        xq_temp = x_temp * q_temp  # [B, C, 8, 8, 32, 32]
-        x1 = xq_temp.reshape(B, 64 * C, H // 8, W // 8)  # [B, 256, 32, 32]
-        x = torch.cat([x0, x1], dim=1)
-        x = self.dc_layer2(x)  # x.shape = torch.Size([1, 96, 64, 64])
+        xq_temp = x_temp * q_temp  # [B, C, 8, 8, 64, 64]
+        x1 = xq_temp.reshape(B, 64 * C, H // 8, W // 8)  # [B, 256, 64, 64]
+        x = torch.cat([x0, x1], dim=1) # [B, 512, 64, 64]
+        x = self.dc_layer2(x)  # # [B, 96, 64, 64]
 
         x_list = []
         for i in range(self.dc_stage3_cfg['NUM_BRANCHES']):
@@ -423,7 +423,7 @@ class DCT_Stream(nn.Module):
                 x_list.append(self.dc_transition2[i](x))
             else:
                 x_list.append(x)
-        y_list = self.dc_stage3(x_list)
+        y_list = self.dc_stage3(x_list) # [B, 96, 64, 64], [B, 192, 64, 64]
 
         x_list = []
         for i in range(self.dc_stage4_cfg['NUM_BRANCHES']):
@@ -431,7 +431,7 @@ class DCT_Stream(nn.Module):
                 x_list.append(self.dc_transition3[i](y_list[-1]))
             else:
                 x_list.append(y_list[i])
-        x = self.dc_stage4(x_list)
+        x = self.dc_stage4(x_list)  # [B, 96, 64, 64], [B, 192, 32, 32], [B, 384, 16, 16]
 
         # Upsampling
         x0_h, x0_w = x[0].size(2), x[0].size(3)

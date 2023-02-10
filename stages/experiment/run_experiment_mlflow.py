@@ -3,14 +3,17 @@ import tempfile
 import time
 
 import sys, os
+from tools.infer_cls import infer_cls
 path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../..')
 if path not in sys.path:
     sys.path.insert(0, path)
 print(path)
 from tools.train import train_model
-
+from tools.infer import infer
+from tools.train_DCT_cls import train_model as train_model_cls
+from tools.train_combined import train_model as train_model_combined
+from tools.infer_combined import infer_combined
 from os import path as osp
-from typing import List, Union
 import fire
 import mlflow
 from loguru import logger
@@ -38,13 +41,7 @@ def log_config_to_mlflow(config, env_info_dict):
             mlflow.log_artifact(f.name)
 
 
-def run_experiment_mlflow(
-    # dataset: FilePath,
-    # model: FilePath,
-    # optimizer: FilePath,
-    # scheduler: FilePath,
-    # gpus: Union[List[int], int] = 0,
-):
+def run_experiment_mlflow():
 
     logger.info("Start mlflow")
     with mlflow.start_run():
@@ -63,7 +60,7 @@ def run_experiment_mlflow(
 
         logger.info("Start")
         train_model()
-
+        # infer(show_mlflow=True)
 
 
 @logger.catch(reraise=True)
