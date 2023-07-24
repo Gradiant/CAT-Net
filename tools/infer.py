@@ -141,7 +141,7 @@ def infer():
     # Instead of using argparse, force these args:
 
     ## CHOOSE ##
-    IS_SEGMENTATION_MODEL = False
+    IS_SEGMENTATION_MODEL = True
     FULL_OPT = False
     EXPORT_ONNX = True
     COMPARE_ONNX_PTH = True
@@ -159,9 +159,9 @@ def infer():
     #    args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output_orig/splicing_dataset/CAT_DCT_only/DCT_only_v2.pth', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     
     if IS_SEGMENTATION_MODEL:
-        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only/finetuning_DCT_DOCIMANv1_DOCUMENTS_cm_best.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+        args = argparse.Namespace(cfg='experiments/CAT_DCT_only.yaml', opts=['TEST.MODEL_FILE', '/media/BM/networks/CATNET/checkpoints/best_checkpoint_segmentation_DOCUMENTS_50_100.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     else:
-        args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', opts=['TEST.MODEL_FILE', 'output/splicing_dataset/CAT_DCT_only_cls/best_CAT_DCT_CLS_lr10e4_DOCIMANv1_bs16.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
+        args = argparse.Namespace(cfg='experiments/CAT_DCT_only_cls.yaml', opts=['TEST.MODEL_FILE', '/media/BM/networks/CATNET/checkpoints/best_checkpoint_DOCIMANv2.pth.tar', 'TEST.FLIP_TEST', 'False', 'TEST.NUM_SAMPLES', '0'])
     update_config(config, args)
 
     # cudnn related setting
@@ -244,7 +244,6 @@ def infer():
 
     model.model.load_state_dict(checkpoint['state_dict'])
 
-
     if not EXPORT_ONNX:
         model = nn.DataParallel(model, device_ids=gpus).cuda()
     dataset_paths['SAVE_PRED'].mkdir(parents=True, exist_ok=True)
@@ -289,6 +288,7 @@ def infer():
 
     with torch.no_grad():
         for index, (image, label, qtable) in enumerate(tqdm(testloader)):
+            print(EXPORT_ONNX)
             logger.info("Load input file : {}".format(get_next_filename(index)))
             if 'mask' in get_next_filename(index):
                 print("skip mask")
@@ -310,7 +310,7 @@ def infer():
             # for param in two_inputs_model.parameters():
             #     print(param.data)
             # exit(-1)
-
+            
             if EXPORT_ONNX:
                 if not onnx_created:
                     # two_inputs_model.eval()

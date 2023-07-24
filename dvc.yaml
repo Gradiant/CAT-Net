@@ -34,7 +34,5 @@ stages:
 #         - results/data/transform/coco_to_mmsegmentation-dociman/masks/${item}
 
  run_experiment_mlflow:
-    cmd: export MLFLOW_TRACKING_URI="http://10.10.30.58:8999/" && export CUDA_VISIBLE_DEVICES="3" &&
+    cmd: export MLFLOW_TRACKING_URI="http://10.5.0.58:8999/" && export CUDA_VISIBLE_DEVICES="3" &&
       mlflow run . --experiment-name catnet-auth --no-conda
-    metrics:
-      - results/metrics.js

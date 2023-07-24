@@ -197,11 +197,7 @@ def train_model():
 
         # Valid
         #if epoch % 10 == 0 or (epoch >= 80 and epoch % 5 == 0) or epoch >= 120:
-<<<<<<< HEAD
-        if epoch % 10 == 0:
-=======
         if epoch % 1 == 0:
->>>>>>> issue-16-Finetuning_with_documents_dataset
             # writer_dict['valid_global_steps'] = epoch
             valid_loss, mean_IoU, avg_mIoU, avg_p_mIoU, IoU_array, pixel_acc, mean_acc, confusion_matrix, f1_avg, prec_avg, recall_avg = \
                 validate(config, validloader, model, writer_dict, "valid")
